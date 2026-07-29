@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幻境对话 - AI角色扮演</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text: #e0d8c8;
+            --text-secondary: #b0a890;
+            --accent: #d4a853;
+            --accent-glow: #f0c060;
+            --npc-bubble: #2d1f3d;
+            --player-bubble: #1a2740;
+            --npc-bar-bg: #1f1528;
+            --player-bar-bg: #0f1d2d;
+            --hp-color: #e0556a;
+            --mp-color: #5b9bd5;
+            --gold-color: #e2b04a;
+            --exp-color: #7bc67e;
+            --danger: #d44;
+            --success: #5b9;
+            --border: #3a3040;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            --font-ui: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            background-image:
+                radial-gradient(ellipse at 50% 0%, rgba(212, 168, 83, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(100, 140, 200, 0.04) 0%, transparent 50%);
+        }
+
+        /* ============ 顶部栏 ============ */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            gap: 10px;
+            z-index: 100;
+            flex-shrink: 0;
+            min-height: 52px;
+        }
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+        .top-bar-left .logo-icon {
+            font-size: 1.4rem;
+        }
+        .top-bar-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            position: relative;
+        }
+        .btn-icon:hover {
+            background: var(--accent);
+            color: #1a1a2e;
+            border-color: var(--accent);
+            box-shadow: 0 0 16px rgba(212, 168, 83, 0.3);
+        }
+        .btn-icon:active {
+            transform: scale(0.92);
+            transition: 0.1s;
+        }
+        .btn-icon .tooltip {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        .btn-icon:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* ============ NPC 状态栏 ============ */
+        .npc-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: var(--npc-bar-bg);
+            border-bottom: 2px solid #3a2848;
+            flex-shrink: 0;
+            position: relative;
+            overflow: visible;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .npc-bar:hover {
+            background: #261d30;
+        }
+        .npc-avatar-frame {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: #2a1f35;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: 0 0 20px rgba(212, 168, 83, 0.25);
+            transition: var(--transition);
+        }
+        .npc-avatar-frame.mood-happy {
+            border-color: #7bc67e;
+            box-shadow: 0 0 20px rgba(123, 198, 126, 0.35);
+        }
+        .npc-avatar-frame.mood-sad {
+            border-color: #5b7fb0;
+            box-shadow: 0 0 20px rgba(91, 127, 176, 0.3);
+        }
+        .npc-avatar-frame.mood-angry {
+            border-color: #e0556a;
+            box-shadow: 0 0 20px rgba(224, 85, 106, 0.4);
+            animation: pulse-angry 0.6s ease-in-out infinite;
+        }
+        .npc-avatar-frame.mood-surprised {
+            border-color: #e2b04a;
+            box-shadow: 0 0 24px rgba(226, 176, 74, 0.45);
+        }
+        @keyframes pulse-angry {
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(224, 85, 106, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 35px rgba(224, 85, 106, 0.7);
+            }
+        }
+        .npc-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            flex: 1;
+        }
+        .npc-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .npc-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #e8d8f0;
+        }
+        .npc-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .npc-mood-tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #3a2848;
+            color: #c0a0d0;
+            white-space: nowrap;
+        }
+        .affection-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .affection-bar-outer {
+            flex: 1;
+            max-width: 120px;
+            height: 6px;
+            background: #2a1f35;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .affection-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, #d4a853, #f0c060);
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .affection-num {
+            font-weight: 700;
+            color: var(--accent-glow);
+            min-width: 30px;
+            text-align: right;
+            transition: var(--transition);
+        }
+        .affection-delta {
+            position: absolute;
+            font-weight: 700;
+            font-size: 0.8rem;
+            pointer-events: none;
+            animation: float-up 1.5s ease-out forwards;
+            z-index: 20;
+            color: #f0c060;
+        }
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+        }
+
+        /* ============ 主角状态面板（可展开） ============ */
+        .player-panel-toggle {
+            position: fixed;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 90;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--player-bar-bg);
+            border: 2px solid #3a5070;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8ab8e0;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+        .player-panel-toggle:hover {
+            border-color: #5b9bd5;
+            box-shadow: 0 0 20px rgba(91, 155, 213, 0.3);
+        }
+        .player-panel-toggle:active {
+            transform: translateY(-50%) scale(0.9);
+        }
+        .player-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .player-panel-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .player-panel {
+            position: fixed;
+            right: -340px;
+            top: 0;
+            bottom: 0;
+            width: 320px;
+            max-width: 85vw;
+            background: var(--player-bar-bg);
+            border-left: 2px solid #3a5070;
+            z-index: 210;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            box-shadow: -8px 0 30px rgba(0, 0, 0, 0.6);
+        }
+        .player-panel.open {
+            right: 0;
+        }
+        .player-panel-header {
+            padding: 20px 18px 14px;
+            border-bottom: 1px solid #2a4058;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            background: var(--player-bar-bg);
+            z-index: 1;
+        }
+        .player-panel-header h3 {
+            font-size: 1.1rem;
+            color: #8ab8e0;
+            letter-spacing: 1px;
+        }
+        .player-panel-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #3a5070;
+            background: transparent;
+            color: #8ab8e0;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .player-panel-close:hover {
+            background: #d44;
+            border-color: #d44;
+            color: #fff;
+        }
+        .player-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 16px 18px;
+        }
+        .player-stat-card {
+            background: #0d1a28;
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            border: 1px solid #1e3045;
+            transition: var(--transition);
+        }
+        .player-stat-card .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6a8daa;
+            margin-bottom: 4px;
+        }
+        .player-stat-card .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+        .player-stat-card .stat-bar-outer {
+            height: 4px;
+            background: #1a3045;
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .player-stat-card .stat-bar-inner {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-hp {
+            color: var(--hp-color);
+        }
+        .stat-hp .stat-bar-inner {
+            background: var(--hp-color);
+        }
+        .stat-mp {
+            color: var(--mp-color);
+        }
+        .stat-mp .stat-bar-inner {
+            background: var(--mp-color);
+        }
+        .stat-gold {
+            color: var(--gold-color);
+        }
+        .stat-exp {
+            color: var(--exp-color);
+        }
+        .stat-exp .stat-bar-inner {
+            background: var(--exp-color);
+        }
+        .player-items-section {
+            padding: 0 18px 20px;
+        }
+        .player-items-section h4 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6a8daa;
+            margin-bottom: 8px;
+        }
+        .player-items-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .player-item-tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #0d1a28;
+            border: 1px solid #2a4058;
+            color: #b0c8d8;
+            transition: var(--transition);
+        }
+        .player-item-tag.new-item {
+            animation: item-glow 0.8s ease-out;
+            border-color: var(--gold-color);
+            color: var(--gold-color);
+        }
+        @keyframes item-glow {
+            0%,
+            100% {
+                box-shadow: 0 0 0px rgba(226, 176, 74, 0);
+            }
+            50% {
+                box-shadow: 0 0 16px rgba(226, 176, 74, 0.6);
+            }
+        }
+
+        /* ============ 对话区域 ============ */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #3a3040;
+            border-radius: 2px;
+        }
+        .message-bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            word-break: break-word;
+            animation: bubble-in 0.35s ease-out;
+            position: relative;
+        }
+        @keyframes bubble-in {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .message-bubble.npc {
+            align-self: flex-start;
+            background: var(--npc-bubble);
+            border: 1px solid #3a2848;
+            border-bottom-left-radius: 4px;
+            color: #e0d0e8;
+        }
+        .message-bubble.player {
+            align-self: flex-end;
+            background: var(--player-bubble);
+            border: 1px solid #1e3050;
+            border-bottom-right-radius: 4px;
+            color: #c8d8e8;
+        }
+        .message-bubble .sender-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            opacity: 0.7;
+        }
+        .message-bubble.npc .sender-label {
+            color: #c0a0d0;
+        }
+        .message-bubble.player .sender-label {
+            color: #8ab8e0;
+        }
+        .message-bubble pre {
+            background: #0d0d1a;
+            border-radius: 6px;
+            padding: 10px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            border: 1px solid #2a2040;
+            margin: 6px 0;
+        }
+        .message-bubble code {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+        }
+        .message-bubble p {
+            margin: 4px 0;
+        }
+        .message-bubble ul,
+        .message-bubble ol {
+            padding-left: 18px;
+            margin: 4px 0;
+        }
+        .typing-cursor::after {
+            content: '▌';
+            animation: blink 0.8s step-end infinite;
+            color: var(--accent);
+        }
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* 加载动画 */
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+            padding: 8px 16px;
+            align-self: flex-start;
+        }
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: dot-bounce 1.2s ease-in-out infinite;
+        }
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+        @keyframes dot-bounce {
+            0%,
+            80%,
+            100% {
+                transform: scale(0.6);
+                opacity: 0.4;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ============ 选项区域 ============ */
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 16px;
+            justify-content: center;
+            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+            min-height: 50px;
+            align-items: center;
+        }
+        .option-btn {
+            padding: 10px 18px;
+            border-radius: 20px;
+            border: 1.5px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+            font-family: var(--font-ui);
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .option-btn:hover {
+            background: var(--accent);
+            color: #1a1a2e;
+            box-shadow: 0 0 20px rgba(212, 168, 83, 0.4);
+            transform: translateY(-2px);
+        }
+        .option-btn:active {
+            transform: scale(0.94);
+            transition: 0.1s;
+        }
+        .option-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+            border-color: #555;
+            color: #777;
+        }
+        .option-btn .hotkey {
+            display: inline-block;
+            margin-right: 4px;
+            font-size: 0.7rem;
+            background: rgba(212, 168, 83, 0.2);
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        .free-input-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 4px;
+        }
+        .free-input-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-family: var(--font-ui);
+            outline: none;
+            transition: var(--transition);
+        }
+        .free-input-row input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(212, 168, 83, 0.2);
+        }
+        .free-input-row button {
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .free-input-row button:hover {
+            box-shadow: 0 0 16px rgba(212, 168, 83, 0.5);
+        }
+
+        /* ============ 模态框 ============ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fade-in 0.25s ease-out;
+        }
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 90%;
+            max-width: 460px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            color: var(--accent);
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+        .modal label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        .modal input,
+        .modal textarea,
+        .modal select {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-family: var(--font-ui);
+            margin-bottom: 12px;
+            outline: none;
+            transition: var(--transition);
+            resize: vertical;
+        }
+        .modal input:focus,
+        .modal textarea:focus,
+        .modal select:focus {
+            border-color: var(--accent);
+        }
+        .modal textarea {
+            min-height: 120px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+        .modal .btn-row {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        .modal button {
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            font-family: var(--font-ui);
+        }
+        .modal .btn-primary {
+            background: var(--accent);
+            color: #1a1a2e;
+        }
+        .modal .btn-primary:hover {
+            box-shadow: 0 0 16px rgba(212, 168, 83, 0.4);
+        }
+        .modal .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: #555;
+        }
+        .modal .btn-secondary:hover {
+            border-color: #999;
+            color: #fff;
+        }
+        .modal .btn-danger {
+            background: transparent;
+            color: #d44;
+            border-color: #d44;
+        }
+        .modal .btn-danger:hover {
+            background: #d44;
+            color: #fff;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #222;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            z-index: 400;
+            pointer-events: none;
+            animation: toast-in 0.35s ease-out, toast-out 0.35s 2s ease-in forwards;
+            border: 1px solid #444;
+            box-shadow: var(--shadow);
+        }
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        @keyframes toast-out {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .npc-bar {
+                padding: 8px 10px;
+                gap: 8px;
+            }
+            .npc-avatar-frame {
+                width: 40px;
+                height: 40px;
+                font-size: 1.5rem;
+                border-width: 2px;
+            }
+            .npc-name {
+                font-size: 0.9rem;
+            }
+            .message-bubble {
+                max-width: 92%;
+                font-size: 0.85rem;
+                padding: 10px 14px;
+            }
+            .option-btn {
+                padding: 8px 14px;
+                font-size: 0.8rem;
+                border-radius: 16px;
+            }
+            .options-container {
+                padding: 8px 10px;
+                gap: 6px;
+            }
+            .player-panel {
+                width: 280px;
+                max-width: 80vw;
+                right: -290px;
+            }
+            .player-panel-toggle {
+                right: 6px;
+                width: 38px;
+                height: 38px;
+                font-size: 1.1rem;
+            }
+            .top-bar {
+                padding: 6px 10px;
+                min-height: 44px;
+            }
+            .top-bar-left {
+                font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .option-btn {
+                width: 100%;
+                text-align: center;
+            }
+            .options-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .free-input-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== 顶部栏 ==================== -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="logo-icon">🏰</span>
+            <span>幻境对话</span>
+        </div>
+        <div class="top-bar-actions">
+            <button class="btn-icon" id="btnSettings" title="API设置">
+                ⚙️<span class="tooltip">API设置</span>
+            </button>
+            <button class="btn-icon" id="btnNewChat" title="新建故事">
+                ✨<span class="tooltip">新建故事</span>
+            </button>
+            <button class="btn-icon" id="btnExport" title="导出对话">
+                📥<span class="tooltip">导出对话</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== NPC 状态栏 ==================== -->
+    <div class="npc-bar" id="npcBar" title="点击查看NPC详情">
+        <div class="npc-avatar-frame" id="npcAvatar">🧝‍♀️</div>
+        <div class="npc-info">
+            <div class="npc-name-row">
+                <span class="npc-name" id="npcName">艾莉丝</span>
+                <span class="npc-title" id="npcTitle">神秘旅人</span>
+                <span class="npc-mood-tag" id="npcMoodTag">😊 友善</span>
+            </div>
+            <div class="affection-row">
+                <span>❤️ 好感度</span>
+                <div class="affection-bar-outer">
+                    <div class="affection-bar-inner" id="affectionBar" style="width:50%"></div>
+                </div>
+                <span class="affection-num" id="affectionNum">50</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 对话区域 ==================== -->
+    <div class="chat-container" id="chatContainer">
+        <div style="text-align:center;color:var(--text-secondary);padding:40px 20px;font-size:0.9rem;line-height:1.8;">
+            <div style="font-size:3rem;margin-bottom:12px;">📜</div>
+            <p><strong>欢迎来到幻境</strong></p>
+            <p style="font-size:0.8rem;">请先配置 DeepSeek API Key 以开始冒险</p>
+            <p style="font-size:0.75rem;">点击右上角 ⚙️ 进行设置</p>
+        </div>
+    </div>
+
+    <!-- ==================== 选项区域 ==================== -->
+    <div class="options-container" id="optionsContainer">
+        <span style="color:var(--text-secondary);font-size:0.8rem;">等待配置 API Key...</span>
+    </div>
+
+    <!-- ==================== 主角状态面板切换按钮 ==================== -->
+    <button class="player-panel-toggle" id="playerPanelToggle" title="主角状态">🛡️</button>
+
+    <!-- ==================== 主角状态面板覆盖层 ==================== -->
+    <div class="player-panel-overlay" id="playerPanelOverlay"></div>
+
+    <!-- ==================== 主角状态面板 ==================== -->
+    <div class="player-panel" id="playerPanel">
+        <div class="player-panel-header">
+            <h3>🛡️ 冒险者</h3>
+            <button class="player-panel-close" id="playerPanelClose">✕</button>
+        </div>
+        <div class="player-stat-grid">
+            <div class="player-stat-card stat-hp">
+                <div class="stat-label">❤️ 生命值</div>
+                <div class="stat-value" id="statHp">100</div>
+                <div class="stat-bar-outer"><div class="stat-bar-inner" id="statHpBar" style="width:100%"></div></div>
+            </div>
+            <div class="player-stat-card stat-mp">
+                <div class="stat-label">💎 魔力</div>
+                <div class="stat-value" id="statMp">50</div>
+                <div class="stat-bar-outer"><div class="stat-bar-inner" id="statMpBar" style="width:100%"></div></div>
+            </div>
+            <div class="player-stat-card stat-gold">
+                <div class="stat-label">💰 金币</div>
+                <div class="stat-value" id="statGold">100</div>
+            </div>
+            <div class="player-stat-card stat-exp">
+                <div class="stat-label">⭐ 经验</div>
+                <div class="stat-value" id="statExp">0 / 100</div>
+                <div class="stat-bar-outer"><div class="stat-bar-inner" id="statExpBar" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="player-items-section">
+            <h4>🎒 背包</h4>
+            <div class="player-items-list" id="playerItems">
+                <span class="player-item-tag">🗡️ 短剑</span>
+                <span class="player-item-tag">🧪 小型治疗药水</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 设置模态框 ==================== -->
+    <div class="modal-overlay" id="settingsOverlay" style="display:none;">
+        <div class="modal">
+            <h3>⚙️ API 设置</h3>
+            <label>DeepSeek API Key</label>
+            <input type="password" id="inputApiKey" placeholder="sk-xxxxxxxxxxxxxxxx">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:12px;">
+                <input type="checkbox" id="showApiKey" style="width:auto;margin:0;"> 显示密钥
+            </label>
+            <label>API 地址（可选，默认官方地址）</label>
+            <input type="text" id="inputBaseUrl" placeholder="https://api.deepseek.com/v1/chat/completions">
+            <label>模型</label>
+            <select id="inputModel">
+                <option value="deepseek-chat">deepseek-chat（标准）</option>
+                <option value="deepseek-reasoner">deepseek-reasoner（R1深度思考）</option>
+            </select>
+            <label>System Prompt（定义NPC角色）</label>
+            <textarea id="inputSystemPrompt" placeholder="你是一个角色扮演引擎..."></textarea>
+            <div class="btn-row">
+                <button class="btn-danger" id="btnResetAll">🗑️ 重置全部数据</button>
+                <button class="btn-secondary" id="btnCloseSettings">取消</button>
+                <button class="btn-primary" id="btnSaveSettings">💾 保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div id="toastContainer"></div>
+
+    <script>
+        (function() {
+            // ==================== DOM 引用 ====================
+            const $chatContainer = document.getElementById('chatContainer');
+            const $optionsContainer = document.getElementById('optionsContainer');
+            const $npcBar = document.getElementById('npcBar');
+            const $npcAvatar = document.getElementById('npcAvatar');
+            const $npcName = document.getElementById('npcName');
+            const $npcTitle = document.getElementById('npcTitle');
+            const $npcMoodTag = document.getElementById('npcMoodTag');
+            const $affectionBar = document.getElementById('affectionBar');
+            const $affectionNum = document.getElementById('affectionNum');
+            const $playerPanel = document.getElementById('playerPanel');
+            const $playerPanelOverlay = document.getElementById('playerPanelOverlay');
+            const $playerPanelToggle = document.getElementById('playerPanelToggle');
+            const $playerPanelClose = document.getElementById('playerPanelClose');
+            const $statHp = document.getElementById('statHp');
+            const $statHpBar = document.getElementById('statHpBar');
+            const $statMp = document.getElementById('statMp');
+            const $statMpBar = document.getElementById('statMpBar');
+            const $statGold = document.getElementById('statGold');
+            const $statExp = document.getElementById('statExp');
+            const $statExpBar = document.getElementById('statExpBar');
+            const $playerItems = document.getElementById('playerItems');
+            const $settingsOverlay = document.getElementById('settingsOverlay');
+            const $inputApiKey = document.getElementById('inputApiKey');
+            const $showApiKey = document.getElementById('showApiKey');
+            const $inputBaseUrl = document.getElementById('inputBaseUrl');
+            const $inputModel = document.getElementById('inputModel');
+            const $inputSystemPrompt = document.getElementById('inputSystemPrompt');
+            const $btnSaveSettings = document.getElementById('btnSaveSettings');
+            const $btnCloseSettings = document.getElementById('btnCloseSettings');
+            const $btnResetAll = document.getElementById('btnResetAll');
+            const $btnSettings = document.getElementById('btnSettings');
+            const $btnNewChat = document.getElementById('btnNewChat');
+            const $btnExport = document.getElementById('btnExport');
+            const $toastContainer = document.getElementById('toastContainer');
+
+            // ==================== 默认系统提示 ====================
+            const DEFAULT_SYSTEM_PROMPT = `你是一个沉浸式角色扮演引擎。你的角色设定如下：
+        - 名字：艾莉丝
+        - 身份：来自异世界的神秘旅人，拥有渊博的知识和温和的性格
+        - 性格：友善、好奇、偶尔幽默，对冒险者的故事充满兴趣
+        - 背景：你游历过无数世界，现在在一座古老的酒馆中与冒险者相遇
+
+        你必须严格遵守以下JSON格式回复（不要包含其他文字）：
+        {
+          "npc_text": "你说的对话内容（支持Markdown格式，可包含**加粗**、*斜体*、代码块等）",
+          "options": ["冒险者可以选择的选项1", "选项2", "选项3"],
+          "status_changes": {
+            "npc_affection": 0,
+            "player_hp": 0,
+            "player_mp": 0,
+            "player_gold": 0,
+            "player_exp": 0,
+            "items_gained": [],
+            "items_lost": []
+          },
+          "npc_mood": "neutral"
+        }
+
+        规则：
+        1. npc_text: NPC的对话内容，生动有趣，长度适中（50-200字）
+        2. options: 始终提供2-4个选项，推动剧情发展
+        3. status_changes: 根据对话内容合理调整数值
+           - npc_affection范围-10到+10
+           - 其他属性变化幅度控制在-15到+15
+           - items_gained/lost为物品名称数组
+        4. npc_mood可选值: neutral, happy, sad, angry, surprised
+        5. 好感度初始50，根据对话选择逐步变化
+        6. 保持角色一致性，记住之前的对话内容`;
+
+            // ==================== 状态管理 ====================
+            const DEFAULT_STATE = {
+                apiKey: '',
+                baseUrl: 'https://api.deepseek.com/v1/chat/completions',
+                model: 'deepseek-chat',
+                systemPrompt: DEFAULT_SYSTEM_PROMPT,
+                npc: {
+                    name: '艾莉丝',
+                    title: '神秘旅人',
+                    avatar: '🧝‍♀️',
+                    affection: 50,
+                    mood: 'neutral',
+                },
+                player: {
+                    name: '冒险者',
+                    hp: 100,
+                    maxHp: 100,
+                    mp: 50,
+                    maxMp: 50,
+                    gold: 100,
+                    level: 1,
+                    exp: 0,
+                    maxExp: 100,
+                    items: ['🗡️ 短剑', '🧪 小型治疗药水'],
+                },
+                messages: [],
+                currentOptions: [],
+                isLoading: false,
+                version: 1,
+            };
+
+            let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+            // ==================== 持久化 ====================
+            function saveState() {
+                try {
+                    const toSave = {
+                        apiKey: state.apiKey,
+                        baseUrl: state.baseUrl,
+                        model: state.model,
+                        systemPrompt: state.systemPrompt,
+                        npc: state.npc,
+                        player: state.player,
+                        messages: state.messages.slice(-200),
+                        currentOptions: state.currentOptions,
+                        version: state.version,
+                    };
+                    localStorage.setItem('rpg_chat_state', JSON.stringify(toSave));
+                } catch (e) {
+                    console.warn('存储空间不足，尝试清理旧数据...');
+                    state.messages = state.messages.slice(-100);
+                    try {
+                        const toSave = {
+                            apiKey: state.apiKey,
+                            baseUrl: state.baseUrl,
+                            model: state.model,
+                            systemPrompt: state.systemPrompt,
+                            npc: state.npc,
+                            player: state.player,
+                            messages: state.messages,
+                            currentOptions: state.currentOptions,
+                            version: state.version,
+                        };
+                        localStorage.setItem('rpg_chat_state', JSON.stringify(toSave));
+                    } catch (e2) {
+                        showToast('⚠️ 存储空间不足，请导出对话后清理');
+                    }
+                }
+            }
+
+            function loadState() {
+                try {
+                    const saved = localStorage.getItem('rpg_chat_state');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        state.apiKey = parsed.apiKey || '';
+                        state.baseUrl = parsed.baseUrl || DEFAULT_STATE.baseUrl;
+                        state.model = parsed.model || DEFAULT_STATE.model;
+                        state.systemPrompt = parsed.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+                        state.npc = { ...DEFAULT_STATE.npc, ...(parsed.npc || {}) };
+                        state.player = { ...DEFAULT_STATE.player, ...(parsed.player || {}) };
+                        state.messages = parsed.messages || [];
+                        state.currentOptions = parsed.currentOptions || [];
+                        state.version = parsed.version || 1;
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('加载存档失败:', e);
+                }
+                return false;
+            }
+
+            function resetAllData() {
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                localStorage.removeItem('rpg_chat_state');
+                updateAllUI();
+                $chatContainer.innerHTML = `
+            <div style="text-align:center;color:var(--text-secondary);padding:40px 20px;font-size:0.9rem;line-height:1.8;">
+              <div style="font-size:3rem;margin-bottom:12px;">📜</div>
+              <p><strong>欢迎来到幻境</strong></p>
+              <p style="font-size:0.8rem;">请先配置 DeepSeek API Key 以开始冒险</p>
+              <p style="font-size:0.75rem;">点击右上角 ⚙️ 进行设置</p>
+            </div>`;
+                $optionsContainer.innerHTML =
+                    '<span style="color:var(--text-secondary);font-size:0.8rem;">等待配置 API Key...</span>';
+                showToast('✅ 所有数据已重置');
+            }
+
+            // ==================== Toast ====================
+            function showToast(msg) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = msg;
+                $toastContainer.appendChild(toast);
+                setTimeout(() => toast.remove(), 2500);
+            }
+
+            // ==================== UI 更新 ====================
+            function updateNPCBar() {
+                const npc = state.npc;
+                $npcName.textContent = npc.name;
+                $npcTitle.textContent = npc.title;
+                $npcAvatar.textContent = npc.avatar;
+                $affectionBar.style.width = npc.affection + '%';
+                $affectionNum.textContent = npc.affection;
+
+                const moodMap = {
+                    neutral: { emoji: '😊', text: '友善', class: '' },
+                    happy: { emoji: '😄', text: '开心', class: 'mood-happy' },
+                    sad: { emoji: '😢', text: '忧郁', class: 'mood-sad' },
+                    angry: { emoji: '😠', text: '愤怒', class: 'mood-angry' },
+                    surprised: { emoji: '😲', text: '惊讶', class: 'mood-surprised' },
+                };
+                const mood = moodMap[npc.mood] || moodMap.neutral;
+                $npcMoodTag.textContent = mood.emoji + ' ' + mood.text;
+                $npcAvatar.className = 'npc-avatar-frame ' + mood.class;
+            }
+
+            function updatePlayerPanel() {
+                const p = state.player;
+                $statHp.textContent = p.hp;
+                $statHpBar.style.width = Math.max(0, (p.hp / p.maxHp) * 100) + '%';
+                $statMp.textContent = p.mp;
+                $statMpBar.style.width = Math.max(0, (p.mp / p.maxMp) * 100) + '%';
+                $statGold.textContent = p.gold;
+                $statExp.textContent = p.exp + ' / ' + p.maxExp;
+                $statExpBar.style.width = Math.max(0, (p.exp / p.maxExp) * 100) + '%';
+
+                $playerItems.innerHTML = p.items
+                    .map(item => `<span class="player-item-tag">${item}</span>`)
+                    .join('') || '<span style="color:#6a8daa;font-size:0.75rem;">空空如也</span>';
+            }
+
+            function updateAllUI() {
+                updateNPCBar();
+                updatePlayerPanel();
+                updateSettingsForm();
+                renderOptions();
+            }
+
+            function updateSettingsForm() {
+                $inputApiKey.value = state.apiKey;
+                $inputBaseUrl.value = state.baseUrl;
+                $inputModel.value = state.model;
+                $inputSystemPrompt.value = state.systemPrompt;
+            }
+
+            // ==================== 对话渲染 ====================
+            function scrollToBottom() {
+                requestAnimationFrame(() => {
+                    $chatContainer.scrollTop = $chatContainer.scrollHeight;
+                });
+            }
+
+            function addMessageBubble(role, text, animate = false) {
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble ' + (role === 'user' ? 'player' : 'npc');
+                const senderLabel = role === 'user' ? state.player.name : state.npc.name;
+                bubble.innerHTML = `<div class="sender-label">${senderLabel}</div><div class="msg-content"></div>`;
+                $chatContainer.appendChild(bubble);
+                const contentDiv = bubble.querySelector('.msg-content');
+
+                if (animate && role === 'assistant') {
+                    // 打字机效果
+                    typewriterEffect(contentDiv, text, () => {
+                        scrollToBottom();
+                    });
+                } else {
+                    contentDiv.innerHTML = renderMarkdown(text);
+                    scrollToBottom();
+                }
+                return bubble;
+            }
+
+            function renderMarkdown(text) {
+                if (!text) return '';
+                try {
+                    let html = marked.parse(text);
+                    // 安全处理
+                    html = html.replace(/<script/gi, '&lt;script');
+                    return html;
+                } catch (e) {
+                    return escapeHtml(text);
+                }
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function typewriterEffect(element, text, callback) {
+                element.textContent = '';
+                element.parentElement.classList.add('typing-cursor');
+                const chars = [...text];
+                let i = 0;
+                const speed = 25 + Math.random() * 20;
+
+                function type() {
+                    if (i < chars.length) {
+                        element.textContent += chars[i];
+                        i++;
+                        scrollToBottom();
+                        setTimeout(type, speed);
+                    } else {
+                        element.parentElement.classList.remove('typing-cursor');
+                        element.innerHTML = renderMarkdown(text);
+                        scrollToBottom();
+                        if (callback) callback();
+                    }
+                }
+                type();
+            }
+
+            function showLoadingIndicator() {
+                const loader = document.createElement('div');
+                loader.className = 'loading-dots';
+                loader.id = 'loadingIndicator';
+                loader.innerHTML = '<span></span><span></span><span></span>';
+                $chatContainer.appendChild(loader);
+                scrollToBottom();
+            }
+
+            function removeLoadingIndicator() {
+                const loader = document.getElementById('loadingIndicator');
+                if (loader) loader.remove();
+            }
+
+            function renderOptions() {
+                if (state.isLoading) {
+                    $optionsContainer.innerHTML =
+                        '<span style="color:var(--text-secondary);font-size:0.8rem;">⏳ NPC 正在思考...</span>';
+                    return;
+                }
+                if (!state.currentOptions || state.currentOptions.length === 0) {
+                    $optionsContainer.innerHTML = `
+              <span style="color:var(--text-secondary);font-size:0.8rem;">暂无选项</span>
+              <div class="free-input-row">
+                <input type="text" id="freeInput" placeholder="输入自定义行动...">
+                <button id="freeSendBtn">发送</button>
+              </div>`;
+                    bindFreeInput();
+                    return;
+                }
+                const hotkeys = ['1', '2', '3', '4'];
+                let html = state.currentOptions
+                    .map(
+                        (opt, i) =>
+                        `<button class="option-btn" data-index="${i}" ${state.isLoading ? 'disabled' : ''}>
+                <span class="hotkey">${hotkeys[i] || ''}</span>${escapeHtml(opt)}
+              </button>`
+                    )
+                    .join('');
+                html += `
+            <div class="free-input-row" style="margin-top:8px;">
+              <input type="text" id="freeInput" placeholder="或输入自定义行动...">
+              <button id="freeSendBtn">✉️</button>
+            </div>`;
+                $optionsContainer.innerHTML = html;
+                bindOptionButtons();
+                bindFreeInput();
+            }
+
+            function bindOptionButtons() {
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        if (!isNaN(index) && state.currentOptions[index] && !state.isLoading) {
+                            handleUserChoice(state.currentOptions[index]);
+                        }
+                    });
+                });
+            }
+
+            function bindFreeInput() {
+                const freeInput = document.getElementById('freeInput');
+                const freeSendBtn = document.getElementById('freeSendBtn');
+                if (!freeInput || !freeSendBtn) return;
+                const sendFree = () => {
+                    const text = freeInput.value.trim();
+                    if (text && !state.isLoading) {
+                        freeInput.value = '';
+                        handleUserChoice(text);
+                    }
+                };
+                freeSendBtn.addEventListener('click', sendFree);
+                freeInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendFree();
+                    }
+                });
+            }
+
+            // ==================== API 调用 ====================
+            async function callDeepSeekAPI(messages) {
+                if (!state.apiKey) throw new Error('请先配置 API Key');
+
+                const body = {
+                    model: state.model,
+                    messages: messages,
+                    temperature: 0.8,
+                    max_tokens: 1500,
+                    stream: false,
+                };
+
+                const response = await fetch(state.baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + state.apiKey,
+                    },
+                    body: JSON.stringify(body),
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    const errMsg = errData.error?.message || `HTTP ${response.status}`;
+                    if (response.status === 401) throw new Error('API Key 无效，请检查设置');
+                    if (response.status === 429) throw new Error('请求过于频繁，请稍后重试');
+                    if (response.status === 402) throw new Error('账户余额不足，请充值');
+                    throw new Error('API 错误: ' + errMsg);
+                }
+
+                const data = await response.json();
+                const content = data.choices?.[0]?.message?.content || '';
+                return content;
+            }
+
+            function parseAIResponse(rawContent) {
+                // 尝试直接解析JSON
+                let parsed = null;
+                const cleanContent = rawContent.trim();
+
+                // 尝试1: 直接解析
+                try {
+                    parsed = JSON.parse(cleanContent);
+                } catch (e1) {
+                    // 尝试2: 提取```json代码块
+                    const jsonBlockMatch = cleanContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+                    if (jsonBlockMatch) {
+                        try {
+                            parsed = JSON.parse(jsonBlockMatch[1].trim());
+                        } catch (e2) {}
+                    }
+                    // 尝试3: 提取{...}最外层
+                    if (!parsed) {
+                        const braceMatch = cleanContent.match(/\{[\s\S]*\}/);
+                        if (braceMatch) {
+                            try {
+                                parsed = JSON.parse(braceMatch[0]);
+                            } catch (e3) {}
+                        }
+                    }
+                }
+
+                if (parsed && typeof parsed.npc_text === 'string') {
+                    return {
+                        npc_text: parsed.npc_text,
+                        options: Array.isArray(parsed.options) ? parsed.options.slice(0, 4) : [],
+                        status_changes: parsed.status_changes || {},
+                        npc_mood: parsed.npc_mood || 'neutral',
+                    };
+                }
+
+                // 降级：将原始内容作为纯文本，生成默认选项
+                return {
+                    npc_text: cleanContent || '（沉默...）',
+                    options: ['继续对话', '换个话题', '询问更多'],
+                    status_changes: {},
+                    npc_mood: 'neutral',
+                };
+            }
+
+            function applyStatusChanges(changes) {
+                if (!changes || typeof changes !== 'object') return;
+                const npc = state.npc;
+                const player = state.player;
+                const deltas = [];
+
+                if (typeof changes.npc_affection === 'number' && changes.npc_affection !== 0) {
+                    const oldVal = npc.affection;
+                    npc.affection = Math.max(0, Math.min(100, npc.affection + changes.npc_affection));
+                    const delta = npc.affection - oldVal;
+                    if (delta !== 0) deltas.push({ type: 'affection', value: delta });
+                }
+                if (typeof changes.player_hp === 'number' && changes.player_hp !== 0) {
+                    player.hp = Math.max(0, Math.min(player.maxHp, player.hp + changes.player_hp));
+                    deltas.push({ type: 'hp', value: changes.player_hp });
+                }
+                if (typeof changes.player_mp === 'number' && changes.player_mp !== 0) {
+                    player.mp = Math.max(0, Math.min(player.maxMp, player.mp + changes.player_mp));
+                    deltas.push({ type: 'mp', value: changes.player_mp });
+                }
+                if (typeof changes.player_gold === 'number' && changes.player_gold !== 0) {
+                    player.gold = Math.max(0, player.gold + changes.player_gold);
+                    deltas.push({ type: 'gold', value: changes.player_gold });
+                }
+                if (typeof changes.player_exp === 'number' && changes.player_exp !== 0) {
+                    player.exp = Math.max(0, player.exp + changes.player_exp);
+                    // 检查升级
+                    while (player.exp >= player.maxExp) {
+                        player.exp -= player.maxExp;
+                        player.level++;
+                        player.maxExp = Math.floor(player.maxExp * 1.5);
+                        player.maxHp += 15;
+                        player.hp = player.maxHp;
+                        player.maxMp += 8;
+                        player.mp = player.maxMp;
+                        deltas.push({ type: 'levelup', value: player.level });
+                    }
+                    deltas.push({ type: 'exp', value: changes.player_exp });
+                }
+                if (Array.isArray(changes.items_gained) && changes.items_gained.length > 0) {
+                    changes.items_gained.forEach(item => {
+                        if (!player.items.includes(item)) {
+                            player.items.push(item);
+                            deltas.push({ type: 'item_gained', value: item });
+                        }
+                    });
+                }
+                if (Array.isArray(changes.items_lost) && changes.items_lost.length > 0) {
+                    changes.items_lost.forEach(item => {
+                        const idx = player.items.indexOf(item);
+                        if (idx >= 0) {
+                            player.items.splice(idx, 1);
+                            deltas.push({ type: 'item_lost', value: item });
+                        }
+                    });
+                }
+                if (changes.npc_mood && ['neutral', 'happy', 'sad', 'angry', 'surprised'].includes(changes.npc_mood)) {
+                    npc.mood = changes.npc_mood;
+                }
+
+                // 显示飘字动画
+                deltas.forEach(d => showDeltaAnimation(d));
+            }
+
+            function showDeltaAnimation(delta) {
+                if (delta.type === 'affection') {
+                    const rect = $affectionNum.getBoundingClientRect();
+                    const span = document.createElement('span');
+                    span.className = 'affection-delta';
+                    span.textContent = (delta.value > 0 ? '+' : '') + delta.value;
+                    span.style.left = rect.left + 'px';
+                    span.style.top = rect.top - 10 + 'px';
+                    span.style.position = 'fixed';
+                    span.style.color = delta.value > 0 ? '#f0c060' : '#e0556a';
+                    document.body.appendChild(span);
+                    setTimeout(() => span.remove(), 1600);
+                }
+                if (delta.type === 'gold') {
+                    showToast((delta.value > 0 ? '💰 +' : '💰 ') + delta.value + ' 金币');
+                }
+                if (delta.type === 'hp' && delta.value < 0) {
+                    showToast('💔 生命值 ' + delta.value);
+                }
+                if (delta.type === 'item_gained') {
+                    showToast('🎁 获得: ' + delta.value);
+                    highlightNewItem(delta.value);
+                }
+                if (delta.type === 'item_lost') {
+                    showToast('📤 失去: ' + delta.value);
+                }
+                if (delta.type === 'levelup') {
+                    showToast('🎉 升级！当前等级: ' + delta.value);
+                }
+            }
+
+            function highlightNewItem(itemName) {
+                setTimeout(() => {
+                    const tags = $playerItems.querySelectorAll('.player-item-tag');
+                    tags.forEach(tag => {
+                        if (tag.textContent.trim() === itemName) {
+                            tag.classList.add('new-item');
+                            setTimeout(() => tag.classList.remove('new-item'), 1000);
+                        }
+                    });
+                }, 300);
+            }
+
+            // ==================== 核心对话流程 ====================
+            async function handleUserChoice(choiceText) {
+                if (state.isLoading) return;
+                state.isLoading = true;
+                renderOptions();
+
+                // 添加用户消息
+                state.messages.push({ role: 'user', content: choiceText });
+                addMessageBubble('user', choiceText);
+                showLoadingIndicator();
+                scrollToBottom();
+
+                try {
+                    // 构建请求消息
+                    const systemMsg = { role: 'system', content: state.systemPrompt };
+                    const apiMessages = [systemMsg, ...state.messages];
+
+                    const rawContent = await callDeepSeekAPI(apiMessages);
+                    removeLoadingIndicator();
+
+                    const parsed = parseAIResponse(rawContent);
+
+                    // 添加助手消息
+                    state.messages.push({ role: 'assistant', content: parsed.npc_text });
+                    state.currentOptions = parsed.options;
+
+                    // 应用状态变化
+                    applyStatusChanges(parsed.status_changes);
+                    if (parsed.npc_mood) {
+                        state.npc.mood = parsed.npc_mood;
+                    }
+
+                    // 渲染NPC回复（打字机效果）
+                    addMessageBubble('assistant', parsed.npc_text, true);
+                    updateNPCBar();
+                    updatePlayerPanel();
+                    saveState();
+
+                    // 打字机效果结束后启用选项
+                    const estimatedTypeTime = parsed.npc_text.length * 35 + 200;
+                    setTimeout(() => {
+                        state.isLoading = false;
+                        renderOptions();
+                        saveState();
+                    }, estimatedTypeTime);
+
+                } catch (error) {
+                    removeLoadingIndicator();
+                    state.isLoading = false;
+                    const errorBubble = document.createElement('div');
+                    errorBubble.className = 'message-bubble npc';
+                    errorBubble.style.borderColor = '#d44';
+                    errorBubble.style.color = '#faa';
+                    errorBubble.innerHTML =
+                        `<div class="sender-label">⚠️ 系统</div><div>发生错误: ${escapeHtml(error.message)}</div>`;
+                    $chatContainer.appendChild(errorBubble);
+                    scrollToBottom();
+                    state.currentOptions = ['重试', '检查API设置', '新建对话'];
+                    renderOptions();
+                    saveState();
+                }
+            }
+
+            async function startNewConversation() {
+                if (state.isLoading) return;
+                if (!state.apiKey) {
+                    showToast('⚠️ 请先配置 API Key');
+                    openSettings();
+                    return;
+                }
+
+                // 重置对话但保留NPC和玩家状态
+                state.messages = [];
+                state.currentOptions = [];
+                state.isLoading = true;
+                state.npc.mood = 'neutral';
+                state.npc.affection = 50;
+                state.player.hp = state.player.maxHp;
+                state.player.mp = state.player.maxMp;
+                $chatContainer.innerHTML = '';
+                renderOptions();
+                updateNPCBar();
+                updatePlayerPanel();
+                saveState();
+
+                // 发送初始消息获取开场白
+                const initMessage = '（新的故事开始了，请向冒险者打招呼并介绍自己）';
+                state.messages.push({ role: 'user', content: initMessage });
+                showLoadingIndicator();
+
+                try {
+                    const systemMsg = { role: 'system', content: state.systemPrompt };
+                    const apiMessages = [systemMsg, ...state.messages];
+                    const rawContent = await callDeepSeekAPI(apiMessages);
+                    removeLoadingIndicator();
+                    const parsed = parseAIResponse(rawContent);
+
+                    state.messages.push({ role: 'assistant', content: parsed.npc_text });
+                    state.currentOptions = parsed.options;
+                    applyStatusChanges(parsed.status_changes);
+                    if (parsed.npc_mood) state.npc.mood = parsed.npc_mood;
+
+                    addMessageBubble('assistant', parsed.npc_text, true);
+                    updateNPCBar();
+                    updatePlayerPanel();
+                    saveState();
+
+                    const estimatedTypeTime = parsed.npc_text.length * 35 + 200;
+                    setTimeout(() => {
+                        state.isLoading = false;
+                        renderOptions();
+                        saveState();
+                    }, estimatedTypeTime);
+
+                } catch (error) {
+                    removeLoadingIndicator();
+                    state.isLoading = false;
+                    const errorBubble = document.createElement('div');
+                    errorBubble.className = 'message-bubble npc';
+                    errorBubble.style.borderColor = '#d44';
+                    errorBubble.innerHTML =
+                        `<div class="sender-label">⚠️ 系统</div><div>开场失败: ${escapeHtml(error.message)}</div>`;
+                    $chatContainer.appendChild(errorBubble);
+                    state.currentOptions = ['重试', '检查API设置'];
+                    renderOptions();
+                    saveState();
+                }
+            }
+
+            // ==================== 导出 ====================
+            function exportConversation() {
+                if (state.messages.length === 0) {
+                    showToast('📭 没有对话可导出');
+                    return;
+                }
+                let markdown = `# 幻境对话记录\n\n`;
+                markdown += `**NPC:** ${state.npc.name} (${state.npc.title})\n`;
+                markdown += `**主角:** ${state.player.name} Lv.${state.player.level}\n`;
+                markdown += `**好感度:** ${state.npc.affection}/100\n\n`;
+                markdown += `---\n\n`;
+                state.messages.forEach(msg => {
+                    const sender = msg.role === 'user' ? state.player.name : state.npc.name;
+                    markdown += `### ${sender}\n\n${msg.content}\n\n---\n\n`;
+                });
+
+                const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `对话记录_${state.npc.name}_${new Date().toISOString().slice(0,10)}.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('✅ 对话已导出为 Markdown 文件');
+            }
+
+            // ==================== 设置面板 ====================
+            function openSettings() {
+                updateSettingsForm();
+                $settingsOverlay.style.display = 'flex';
+                $inputApiKey.focus();
+            }
+
+            function closeSettings() {
+                $settingsOverlay.style.display = 'none';
+            }
+
+            function saveSettings() {
+                state.apiKey = $inputApiKey.value.trim();
+                state.baseUrl = $inputBaseUrl.value.trim() || DEFAULT_STATE.baseUrl;
+                state.model = $inputModel.value;
+                state.systemPrompt = $inputSystemPrompt.value.trim() || DEFAULT_SYSTEM_PROMPT;
+                saveState();
+                closeSettings();
+                showToast('✅ 设置已保存');
+
+                // 更新NPC信息（从system prompt尝试提取）
+                const nameMatch = state.systemPrompt.match(/名字[：:]\s*(\S+)/);
+                if (nameMatch) {
+                    state.npc.name = nameMatch[1];
+                    updateNPCBar();
+                    saveState();
+                }
+
+                // 如果没有对话历史，提示开始新对话
+                if (state.messages.length === 0 && state.apiKey) {
+                    $chatContainer.innerHTML = `
+            <div style="text-align:center;color:var(--text-secondary);padding:40px 20px;font-size:0.9rem;line-height:1.8;">
+              <div style="font-size:3rem;margin-bottom:12px;">✨</div>
+              <p><strong>API Key 已就绪</strong></p>
+              <p style="font-size:0.8rem;">点击下方按钮开始你的冒险</p>
+            </div>`;
+                    $optionsContainer.innerHTML = `
+            <button class="option-btn" id="btnStartAdventure" style="font-size:1rem;padding:12px 28px;">
+              🗡️ 开始冒险
+            </button>`;
+                    document.getElementById('btnStartAdventure')?.addEventListener('click', startNewConversation);
+                }
+            }
+
+            // ==================== 主角面板 ====================
+            function openPlayerPanel() {
+                updatePlayerPanel();
+                $playerPanel.classList.add('open');
+                $playerPanelOverlay.classList.add('open');
+            }
+
+            function closePlayerPanel() {
+                $playerPanel.classList.remove('open');
+                $playerPanelOverlay.classList.remove('open');
+            }
+
+            // ==================== 键盘快捷键 ====================
+            function handleKeyboard(e) {
+                // 在设置面板中不处理
+                if ($settingsOverlay.style.display === 'flex') return;
+                // 在自由输入框中不处理数字快捷键
+                if (document.activeElement?.id === 'freeInput') return;
+
+                const key = e.key;
+                if (['1', '2', '3', '4'].includes(key) && !state.isLoading && state.currentOptions.length > 0) {
+                    const index = parseInt(key) - 1;
+                    if (state.currentOptions[index]) {
+                        e.preventDefault();
+                        handleUserChoice(state.currentOptions[index]);
+                    }
+                }
+                if (key === 'c' && e.ctrlKey && !e.shiftKey) {
+                    e.preventDefault();
+                    $btnNewChat.click();
+                }
+                if (key === 'Escape') {
+                    closePlayerPanel();
+                    closeSettings();
+                }
+            }
+
+            // ==================== 事件绑定 ====================
+            $btnSettings.addEventListener('click', openSettings);
+            $btnCloseSettings.addEventListener('click', closeSettings);
+            $btnSaveSettings.addEventListener('click', saveSettings);
+            $btnResetAll.addEventListener('click', () => {
+                if (confirm('确定要重置全部数据吗？此操作不可撤销！')) {
+                    resetAllData();
+                    closeSettings();
+                }
+            });
+            $btnNewChat.addEventListener('click', () => {
+                if (state.messages.length > 0 && !confirm('开始新故事将清空当前对话，确定继续？')) return;
+                startNewConversation();
+            });
+            $btnExport.addEventListener('click', exportConversation);
+            $settingsOverlay.addEventListener('click', (e) => {
+                if (e.target === $settingsOverlay) closeSettings();
+            });
+            $showApiKey.addEventListener('change', () => {
+                $inputApiKey.type = $showApiKey.checked ? 'text' : 'password';
+            });
+            $playerPanelToggle.addEventListener('click', openPlayerPanel);
+            $playerPanelClose.addEventListener('click', closePlayerPanel);
+            $playerPanelOverlay.addEventListener('click', closePlayerPanel);
+            $npcBar.addEventListener('click', () => {
+                showToast(
+                    `📋 ${state.npc.name}: 好感度 ${state.npc.affection}/100 | 心情: ${state.npc.mood} | ${state.npc.title}`
+                    );
+            });
+            document.addEventListener('keydown', handleKeyboard);
+
+            // ==================== 初始化 ====================
+            function init() {
+                const hasSaved = loadState();
+                updateAllUI();
+
+                if (hasSaved && state.messages.length > 0 && state.apiKey) {
+                    // 恢复对话界面
+                    $chatContainer.innerHTML = '';
+                    state.messages.forEach(msg => {
+                        const role = msg.role === 'user' ? 'user' : 'assistant';
+                        addMessageBubble(role, msg.content, false);
+                    });
+                    renderOptions();
+                    scrollToBottom();
+                } else if (state.apiKey) {
+                    // 有API Key但无对话
+                    $chatContainer.innerHTML = `
+            <div style="text-align:center;color:var(--text-secondary);padding:40px 20px;font-size:0.9rem;line-height:1.8;">
+              <div style="font-size:3rem;margin-bottom:12px;">✨</div>
+              <p><strong>准备就绪</strong></p>
+              <p style="font-size:0.8rem;">开启一段新的冒险吧</p>
+            </div>`;
+                    $optionsContainer.innerHTML = `
+            <button class="option-btn" id="btnStartAdventure" style="font-size:1rem;padding:12px 28px;">
+              🗡️ 开始冒险
+            </button>`;
+                    document.getElementById('btnStartAdventure')?.addEventListener('click', startNewConversation);
+                } else {
+                    // 未配置
+                    $optionsContainer.innerHTML =
+                        '<span style="color:var(--text-secondary);font-size:0.8rem;">等待配置 API Key...</span>';
+                }
+            }
+
+            init();
+            console.log('🏰 幻境对话平台已就绪');
+            console.log('  NPC:', state.npc.name);
+            console.log('  模型:', state.model);
+            console.log('  API Key:', state.apiKey ? '已配置 ✓' : '未配置 ✗');
+            console.log('  快捷键: 数字键1-4选择选项 | Ctrl+C 新建对话 | Esc 关闭面板');
+        })();
+    </script>
+</body>
+</html>
