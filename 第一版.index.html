@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>多元宇宙穿梭 · AI旅人</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg: #0a0a14;
+            --surface: #121624;
+            --surface2: #1a2030;
+            --text: #e0d8c8;
+            --text2: #9a9aaa;
+            --accent: #7c5cfc;
+            --accent2: #a78bfa;
+            --danger: #ef4444;
+            --gold: #fbbf24;
+            --border: #2a2a3c;
+            --radius: 14px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.5);
+            --transition: 0.2s ease;
+            --font: 'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;
+            --mono: 'SF Mono','Cascadia Code',monospace;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:var(--font);
+            background:var(--bg);
+            color:var(--text);
+            height:100vh;height:100dvh;
+            display:flex;flex-direction:column;
+            overflow:hidden;
+            user-select:none;
+            -webkit-tap-highlight-color:transparent;
+            background-image:radial-gradient(ellipse at 20% 20%, rgba(124,92,252,0.1) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 80%, rgba(96,165,250,0.08) 0%, transparent 50%);
+        }
+        .top-bar{
+            display:flex;align-items:center;justify-content:space-between;
+            padding:8px 12px;background:var(--surface);
+            border-bottom:1px solid var(--border);gap:6px;z-index:100;flex-shrink:0;min-height:48px;
+        }
+        .world-btn{
+            display:flex;align-items:center;gap:4px;background:var(--surface2);border-radius:20px;
+            padding:6px 12px;border:1px solid var(--border);color:var(--accent2);font-weight:600;
+            font-size:0.85rem;cursor:pointer;transition:var(--transition);white-space:nowrap;
+        }
+        .world-btn:active{transform:scale(0.95);border-color:var(--accent)}
+        .icon-btn{
+            width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
+            background:var(--surface2);color:var(--text2);cursor:pointer;font-size:1rem;
+            display:flex;align-items:center;justify-content:center;transition:var(--transition);
+        }
+        .icon-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+        .npc-bar{
+            display:flex;align-items:center;gap:10px;padding:8px 14px;
+            background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;flex-shrink:0;
+        }
+        .npc-emoji{font-size:2rem;width:42px;text-align:center}
+        .npc-info{flex:1}
+        .npc-name{font-weight:700;color:#e8d8f0}
+        .npc-mood{font-size:0.8rem;color:var(--text2)}
+        .affection{font-size:0.85rem;color:var(--gold);margin-top:2px}
+        .chat-area{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+        .bubble{
+            max-width:85%;padding:10px 14px;border-radius:16px;line-height:1.6;font-size:0.9rem;
+            word-break:break-word;animation:fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .bubble.npc{align-self:flex-start;background:#1e1836;border:1px solid #2a1f40;color:#e0d0e8;border-bottom-left-radius:4px}
+        .bubble.player{align-self:flex-end;background:#111b2e;border:1px solid #1e3050;color:#c8d8e8;border-bottom-right-radius:4px}
+        .bubble .sender{font-size:0.7rem;font-weight:700;opacity:0.7;margin-bottom:4px}
+        .options-area{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;justify-content:center;flex-shrink:0;background:var(--surface);border-top:1px solid var(--border)}
+        .opt-btn{
+            padding:8px 16px;border-radius:20px;border:1.5px solid var(--accent);background:transparent;
+            color:var(--accent2);cursor:pointer;font-weight:600;font-size:0.8rem;transition:var(--transition);
+        }
+        .opt-btn:active{transform:scale(0.94)}
+        .opt-btn:disabled{opacity:0.3;pointer-events:none}
+        .free-row{display:flex;gap:6px;width:100%;max-width:400px;margin-top:4px}
+        .free-row input{flex:1;padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;outline:none}
+        .free-row button{padding:8px 14px;border-radius:20px;background:var(--accent);color:#fff;border:none;font-weight:700}
+        .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center}
+        .modal-box{background:var(--surface);border-radius:var(--radius);padding:20px;width:90%;max-width:420px;max-height:85vh;overflow-y:auto;border:1px solid var(--border)}
+        .modal-box h3{color:var(--accent2);margin-bottom:12px}
+        .modal-box input,.modal-box textarea,.modal-box select{width:100%;padding:8px 12px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:0.8rem;resize:vertical}
+        .modal-box textarea{min-height:100px}
+        .btn-row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+        .btn{padding:8px 16px;border-radius:20px;border:none;cursor:pointer;font-weight:600;font-size:0.8rem}
+        .btn-primary{background:var(--accent);color:#fff}
+        .btn-danger{background:var(--danger);color:#fff}
+        .btn-secondary{background:transparent;border:1px solid #555;color:#aaa}
+        .panel-right{position:fixed;right:0;top:0;bottom:0;width:300px;max-width:80vw;background:var(--surface);z-index:150;transform:translateX(100%);transition:transform 0.3s;overflow-y:auto;border-left:1px solid var(--border);padding:16px}
+        .panel-right.open{transform:translateX(0)}
+        .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:140;opacity:0;pointer-events:none;transition:opacity 0.3s}
+        .panel-overlay.open{opacity:1;pointer-events:auto}
+        .hidden-panel{display:none;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;border:1px solid var(--danger)}
+        .hidden-panel.show{display:block}
+        .tag{display:inline-block;padding:2px 8px;border-radius:10px;background:var(--surface2);font-size:0.7rem;margin:2px}
+        .achievement{background:#1a1a2e;border:1px solid var(--gold);color:var(--gold)}
+        .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 20px;border-radius:20px;z-index:300;font-size:0.8rem;animation:toastIn 0.3s}
+        @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <button class="world-btn" id="worldBtn">🌍 <span id="worldLabel">原神</span></button>
+    <div style="display:flex;gap:6px;">
+        <button class="icon-btn" id="settingsBtn" title="设置">⚙️</button>
+        <button class="icon-btn" id="inventoryBtn" title="背包">🎒</button>
+        <button class="icon-btn" id="collectionBtn" title="图鉴">📖</button>
+    </div>
+</div>
+
+<div class="npc-bar" id="npcBar">
+    <div class="npc-emoji" id="npcEmoji">🧚</div>
+    <div class="npc-info">
+        <div class="npc-name" id="npcName">派蒙</div>
+        <div class="npc-mood" id="npcMood">😊 兴奋</div>
+        <div class="affection" id="npcAffection">❤️ 好感 120</div>
+    </div>
+</div>
+
+<div class="chat-area" id="chatArea">
+    <div style="text-align:center;color:var(--text2);padding:30px;">✨ 配置API Key后开始冒险</div>
+</div>
+
+<div class="options-area" id="optionsArea"></div>
+
+<!-- 右侧面板：主角状态 / 背包 / 图鉴 -->
+<div class="panel-overlay" id="panelOverlay"></div>
+<div class="panel-right" id="panelRight"></div>
+
+<!-- 私密面板（密码验证） -->
+<div class="modal-mask" id="privateMask" style="display:none;">
+    <div class="modal-box">
+        <h3>🔞 私密档案</h3>
+        <input type="password" id="privatePwd" placeholder="请输入密码">
+        <div class="btn-row"><button class="btn btn-secondary" onclick="closePrivate()">取消</button><button class="btn btn-primary" onclick="unlockPrivate()">解锁</button></div>
+        <div class="hidden-panel" id="privateContent"></div>
+    </div>
+</div>
+
+<!-- 设置面板 -->
+<div class="modal-mask" id="settingsMask" style="display:none;">
+    <div class="modal-box"><h3>⚙️ 设置</h3>
+        <label>API Key</label><input type="password" id="apiKeyInput" placeholder="sk-...">
+        <label>模型</label><select id="modelSelect"><option value="deepseek-chat">deepseek-chat</option><option value="deepseek-reasoner">deepseek-reasoner</option></select>
+        <label>私密档案密码</label><input type="text" id="pwdSetting" placeholder="默认123456">
+        <label>自定义世界 (JSON)</label><textarea id="customWorldJson" placeholder='{"name":"新世界","player":{...},"npc":{...},"systemPrompt":"..."}'></textarea>
+        <div class="btn-row"><button class="btn btn-danger" onclick="resetAll()">重置全部</button><button class="btn btn-secondary" onclick="closeSettings()">取消</button><button class="btn btn-primary" onclick="saveSettings()">保存</button></div>
+    </div>
+</div>
+
+<!-- 世界选择面板 -->
+<div class="modal-mask" id="worldMask" style="display:none;">
+    <div class="modal-box" id="worldList"></div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+// ==================== 数据预设 ====================
+const DEFAULT_WORLDS = {
+    genshin: {
+        name:'原神', icon:'🌍',
+        player:{name:'空',gender:'男',age:'未知(外貌16-18)',vision:'无',weapon:'无锋剑',constellation:'旅人座',nation:'无(旅行者)',status:'健康，力量封印中',location:'蒙德·坠星山谷·星落湖',time:'清晨，阳光明媚',adventureRank:'—'},
+        npc:{name:'派蒙',emoji:'🧚',title:'向导、最好的伙伴',mood:'excited',affection:120, public:{identity:'向导、最好的伙伴',appearance:'银白色短发，深蓝色星空披风，头上悬浮星环',outfit:'白色连体衣，点缀星辰与金饰的披风',personality:'活泼、贪吃、话多、关心同伴',physique:'娇小玲珑，漂浮在空中'}},
+        systemPrompt:`你是派蒙，旅行者最好的伙伴。你活泼贪吃，说话带着夸张的语气，经常用"呀"、"呢"、"哇"等语气词。
+你必须用JSON格式回复：{"npc_text":"对话内容","options":["选项1","选项2","选项3"],"status_changes":{"affection":0},"event":"简短事件描述","npc_mood":"excited/happy/sad/angry/neutral"}
+保持角色一致性，好感度初始120，根据对话微调。`
+    },
+    starrail: {
+        name:'星穹铁道', icon:'🚂',
+        player:{name:'穹',gender:'男',age:'未知',vision:'无',weapon:'棒球棍',constellation:'—',nation:'星穹列车',status:'健康',location:'黑塔空间站',time:'标准时',adventureRank:'—'},
+        npc:{name:'三月七',emoji:'📸',title:'列车组伙伴',mood:'happy',affection:100, public:{identity:'星穹列车乘员',appearance:'粉色长发，头戴蝴蝶结，手持相机',outfit:'蓝色制服短裙',personality:'开朗活泼，喜欢拍照',physique:'少女体型'}},
+        systemPrompt:`你是三月七，星穹列车的活泼少女。你喜欢拍照，说话元气满满。
+回复JSON格式同上，好感度初始100。`
+    },
+    honkai3: {
+        name:'崩坏3', icon:'🎮',
+        player:{name:'舰长',gender:'男',age:'—',vision:'—',weapon:'指挥刀',constellation:'—',nation:'休伯利安',status:'良好',location:'休伯利安号舰桥',time:'—',adventureRank:'—'},
+        npc:{name:'琪亚娜',emoji:'⚔️',title:'女武神',mood:'neutral',affection:80, public:{identity:'女武神·白练',appearance:'白色长发，蓝眸，身材高挑',outfit:'白色女武神装甲',personality:'热血笨蛋，善良直率',physique:'匀称矫健'}},
+        systemPrompt:`你是琪亚娜·卡斯兰娜，休伯利安的女武神。你热血单纯，喜欢战斗和美食。
+回复JSON格式同上，好感度初始80。`
+    }
+};
+
+// 私密档案（仅本地存储，不发给AI）
+const DEFAULT_PRIVATE = {
+    genshin: {
+        body:'平坦未发育的胸部，小巧柔软的臀部，悬空的白嫩小脚丫穿着白色连裤袜，粉嫩未唤醒的私处，紧致花径，子宫未发育',
+        status:'安全期未知，高潮次数0，姿势：在空中飞舞'
+    },
+    starrail: {
+        body:'少女体型，匀称曲线，...', status:'...'
+    },
+    honkai3: {
+        body:'矫健身材，...', status:'...'
+    }
+};
+
+// ==================== 全局状态 ====================
+let state = {
+    currentWorld:'genshin',
+    worlds: JSON.parse(JSON.stringify(DEFAULT_WORLDS)),
+    inventory: ['无锋剑','风之翼'],
+    collections: { npcs:[], rareItems:[], events:[], achievements:[] },
+    settings: { apiKey:'', baseUrl:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat', privatePwd:'123456' },
+    privateFields: JSON.parse(JSON.stringify(DEFAULT_PRIVATE)),
+    isLoading: false
+};
+
+// 保存/加载
+function save(){ localStorage.setItem('multiverse_rpg', JSON.stringify(state)); }
+function load(){
+    const d=localStorage.getItem('multiverse_rpg');
+    if(d){ try{ state=JSON.parse(d); }catch(e){ resetData(); } }
+    // 确保新增世界结构
+    for(const k in DEFAULT_WORLDS){
+        if(!state.worlds[k]) state.worlds[k]=JSON.parse(JSON.stringify(DEFAULT_WORLDS[k]));
+        if(!state.privateFields[k]) state.privateFields[k]=JSON.parse(JSON.stringify(DEFAULT_PRIVATE[k]));
+    }
+}
+function resetData(){
+    state={ currentWorld:'genshin', worlds:JSON.parse(JSON.stringify(DEFAULT_WORLDS)), inventory:['无锋剑','风之翼'], collections:{ npcs:[], rareItems:[], events:[], achievements:[] }, settings:{ apiKey:'', baseUrl:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat', privatePwd:'123456' }, privateFields:JSON.parse(JSON.stringify(DEFAULT_PRIVATE)), isLoading:false };
+    localStorage.removeItem('multiverse_rpg');
+    renderAll();
+}
+
+// 工具
+const $=(s)=>document.querySelector(s);
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; $('body').appendChild(t); setTimeout(()=>t.remove(),2000); }
+function getWorld(){ return state.worlds[state.currentWorld]; }
+function getNPC(){ return getWorld().npc; }
+function getPlayer(){ return getWorld().player; }
+
+// UI 渲染
+function renderAll(){
+    const w=getWorld();
+    $('#worldLabel').textContent = w.icon+' '+w.name;
+    const npc=w.npc;
+    $('#npcEmoji').textContent = npc.emoji;
+    $('#npcName').textContent = npc.name;
+    const moodMap={excited:'😆 兴奋',happy:'😊 开心',sad:'😢 忧郁',angry:'😠 愤怒',neutral:'😐 平静'};
+    $('#npcMood').textContent = moodMap[npc.mood] || '😐 平静';
+    $('#npcAffection').textContent = '❤️ 好感 '+npc.affection;
+    if(npc.affection>=100){
+        if(!$('#privateEntry')){
+            const btn=document.createElement('button'); btn.id='privateEntry'; btn.className='btn btn-danger'; btn.textContent='🔞'; btn.style='margin-left:8px;font-size:0.7rem;padding:2px 8px;';
+            btn.onclick=openPrivate;
+            $('#npcAffection').after(btn);
+        }
+    }else{
+        const e=$('#privateEntry'); if(e)e.remove();
+    }
+    renderChatHistory();
+    renderOptions();
+    updateCollections();
+}
+
+function renderChatHistory(){
+    const area=$('#chatArea');
+    area.innerHTML='';
+    const msgs=getWorld().messages||[];
+    if(msgs.length===0){ area.innerHTML='<div style="text-align:center;color:var(--text2);padding:30px;">✨ 开启一段新的冒险吧</div>'; return; }
+    msgs.forEach(m=>{
+        const b=document.createElement('div'); b.className='bubble '+(m.role==='user'?'player':'npc');
+        b.innerHTML=`<div class="sender">${m.role==='user'?getPlayer().name:getNPC().name}</div><div>${marked.parse(m.content)}</div>`;
+        area.appendChild(b);
+    });
+    area.scrollTop=area.scrollHeight;
+}
+
+function renderOptions(){
+    const area=$('#optionsArea');
+    const w=getWorld();
+    if(state.isLoading){ area.innerHTML='<span style="color:var(--text2)">⏳ 思考中...</span>'; return; }
+    let html='';
+    if(w.currentOptions&&w.currentOptions.length>0){
+        w.currentOptions.forEach((opt,i)=>{
+            html+=`<button class="opt-btn" onclick="sendOption(${i})">${opt}</button>`;
+        });
+    }
+    html+=`<div class="free-row"><input id="freeInput" placeholder="自定义行动..."><button onclick="sendFree()">发送</button></div>`;
+    area.innerHTML=html;
+}
+
+// 对话逻辑
+async function sendOption(index){
+    const opt=getWorld().currentOptions[index];
+    if(!opt || state.isLoading) return;
+    await sendMessage(opt);
+}
+async function sendFree(){
+    const inp=$('#freeInput');
+    if(!inp||!inp.value.trim()||state.isLoading) return;
+    await sendMessage(inp.value.trim());
+    inp.value='';
+}
+async function sendMessage(text){
+    const w=getWorld();
+    if(!state.settings.apiKey){ toast('请先配置API Key'); openSettings(); return; }
+    state.isLoading=true; renderOptions();
+    w.messages.push({role:'user',content:text});
+    renderChatHistory();
+    const loading=document.createElement('div'); loading.className='bubble npc'; loading.innerHTML='...'; $('#chatArea').appendChild(loading);
+    try{
+        const body={model:state.settings.model, messages:[{role:'system',content:w.systemPrompt},...w.messages], temperature:0.8, max_tokens:1500, stream:false};
+        const res=await fetch(state.settings.baseUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.settings.apiKey},body:JSON.stringify(body)});
+        if(!res.ok) throw new Error(await res.text());
+        const data=await res.json();
+        const content=data.choices[0].message.content;
+        let parsed;
+        try{ parsed=JSON.parse(content); }catch(e){ parsed={npc_text:content,options:['继续对话'],status_changes:{},event:'',npc_mood:'neutral'}; }
+        w.messages.push({role:'assistant',content:parsed.npc_text});
+        w.currentOptions=parsed.options||['继续对话'];
+        if(parsed.status_changes?.affection) w.npc.affection = Math.max(0,Math.min(200,(w.npc.affection||0)+parsed.status_changes.affection));
+        if(parsed.npc_mood) w.npc.mood=parsed.npc_mood;
+        if(parsed.event) addEvent(parsed.event);
+        loading.remove();
+        renderChatHistory();
+        renderOptions();
+        updateNPC();
+        save();
+    }catch(e){
+        loading.remove();
+        toast('错误: '+e.message);
+        state.isLoading=false; renderOptions();
+    }
+    state.isLoading=false;
+}
+
+function updateNPC(){ renderAll(); }
+
+function addEvent(desc){
+    const w=getWorld();
+    if(!w.events)w.events=[];
+    w.events.push({time:new Date().toLocaleString(), desc});
+    state.collections.events.push({world:state.currentWorld, time:new Date().toLocaleString(), desc});
+    save();
+}
+
+// 面板：主角状态、背包、图鉴
+function openPanel(type){
+    const panel=$('#panelRight');
+    let html='<h3>🛡️ 冒险者</h3>';
+    if(type==='player'){
+        const p=getPlayer();
+        html+=`<p><b>${p.name}</b> (${p.gender})</p><p>年龄:${p.age}</p><p>神之眼:${p.vision}</p><p>武器:${p.weapon}</p><p>命之座:${p.constellation}</p><p>所属:${p.nation}</p><p>状态:${p.status}</p><p>位置:${p.location}</p><p>时间:${p.time}</p><p>冒险等阶:${p.adventureRank}</p>`;
+    }else if(type==='inventory'){
+        html='<h3>🎒 次元背包</h3>'+state.inventory.map(i=>'<span class="tag">'+i+'</span>').join('')||'空空如也';
+    }else if(type==='collection'){
+        html='<h3>📖 旅人图鉴</h3><h4>🏆 成就</h4>'+state.collections.achievements.map(a=>'<span class="tag achievement">'+a+'</span>').join('')||'暂无';
+        html+='<h4>🧑‍🤝‍🧑 NPC记录</h4>'+state.collections.npcs.map(n=>'<span class="tag">'+n+'</span>').join('')||'暂无';
+        html+='<h4>📜 旅途记忆</h4>';
+        state.collections.events.forEach(e=>html+=`<p style="font-size:0.7rem;margin:4px 0">[${e.world}] ${e.time} ${e.desc}</p>`);
+    }
+    panel.innerHTML=html+'<button class="btn btn-secondary" onclick="closePanel()" style="margin-top:10px;">关闭</button>';
+    panel.classList.add('open');
+    $('#panelOverlay').classList.add('open');
+}
+function closePanel(){ $('#panelRight').classList.remove('open'); $('#panelOverlay').classList.remove('open'); }
+
+// 私密面板
+function openPrivate(){
+    $('#privateMask').style.display='flex';
+    $('#privateContent').classList.remove('show');
+}
+function closePrivate(){ $('#privateMask').style.display='none'; }
+function unlockPrivate(){
+    const pwd=$('#privatePwd').value;
+    if(pwd===state.settings.privatePwd){
+        const data=state.privateFields[state.currentWorld];
+        $('#privateContent').innerHTML=`<p><b>身体档案：</b>${data.body}</p><p><b>状态：</b>${data.status}</p>`;
+        $('#privateContent').classList.add('show');
+        toast('已解锁');
+    }else{ toast('密码错误'); }
+}
+
+// 设置
+function openSettings(){
+    $('#apiKeyInput').value=state.settings.apiKey;
+    $('#modelSelect').value=state.settings.model;
+    $('#pwdSetting').value=state.settings.privatePwd;
+    $('#settingsMask').style.display='flex';
+}
+function closeSettings(){ $('#settingsMask').style.display='none'; }
+function saveSettings(){
+    state.settings.apiKey=$('#apiKeyInput').value.trim();
+    state.settings.model=$('#modelSelect').value;
+    state.settings.privatePwd=$('#pwdSetting').value.trim()||'123456';
+    const custom=$('#customWorldJson').value.trim();
+    if(custom){
+        try{ const w=JSON.parse(custom); state.worlds[w.name]=w; }catch(e){ toast('JSON格式错误'); }
+    }
+    save(); closeSettings(); toast('设置已保存');
+}
+
+// 世界切换
+function showWorldList(){
+    const list=$('#worldList');
+    let html='<h3>🌍 选择世界</h3>';
+    for(const k in state.worlds){
+        const w=state.worlds[k];
+        html+=`<button class="btn btn-secondary" style="margin:4px" onclick="switchWorld('${k}')">${w.icon||'🌍'} ${w.name}</button>`;
+    }
+    html+='<button class="btn btn-primary" onclick="openSettings()">➕ 自定义世界</button>';
+    list.innerHTML=html;
+    $('#worldMask').style.display='flex';
+}
+function switchWorld(key){
+    state.currentWorld=key;
+    $('#worldMask').style.display='none';
+    renderAll();
+    save();
+}
+
+function updateCollections(){
+    const w=getWorld();
+    if(!state.collections.npcs.includes(w.npc.name)) state.collections.npcs.push(w.npc.name);
+    if(w.npc.affection>=150&&!state.collections.achievements.includes('羁绊满溢')) state.collections.achievements.push('羁绊满溢');
+    save();
+}
+
+// 事件绑定
+$('#worldBtn').onclick=showWorldList;
+$('#settingsBtn').onclick=openSettings;
+$('#inventoryBtn').onclick=()=>openPanel('inventory');
+$('#collectionBtn').onclick=()=>openPanel('collection');
+$('#npcBar').onclick=()=>openPanel('player');
+$('#panelOverlay').onclick=closePanel;
+$('#worldMask').onclick=function(e){if(e.target===this) this.style.display='none';};
+$('#settingsMask').onclick=function(e){if(e.target===this) closeSettings();};
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ closePanel(); closePrivate(); closeSettings(); $('#worldMask').style.display='none'; }
+});
+
+// 初始化
+load();
+renderAll();
+</script>
+</body>
+</html>
