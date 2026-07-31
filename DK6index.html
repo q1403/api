@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, shrink-to-fit=yes, viewport-fit=cover">
+<title>旅人之星 · 多元宇宙</title>
+<style>
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --gold: #e2b04a;
+    --purple: #9b59b6;
+    --text: #e0e0e0;
+    --text2: #a0a0b0;
+    --text3: #6c6c80;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+/* 顶栏 */
+.top-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--surface2);
+    flex-wrap: wrap;
+}
+.world-select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 14px;
+    max-width: 140px;
+}
+.world-select option { background: var(--surface); }
+.btn-icon {
+    background: none; border: 1px solid var(--text3);
+    color: var(--text); font-size: 18px;
+    padding: 4px 8px; border-radius: 6px;
+    cursor: pointer;
+}
+.btn-icon:hover { border-color: var(--gold); color: var(--gold); }
+/* NPC 横条（横向滚动） */
+.npc-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--surface2);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold) transparent;
+}
+.npc-strip::-webkit-scrollbar { height: 4px; }
+.npc-strip::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+.npc-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: 0.2s;
+}
+.npc-chip.active-target {
+    background: var(--gold);
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 8px var(--gold);
+}
+/* 聊天区 */
+.chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.message {
+    display: flex; flex-direction: column;
+    max-width: 85%;
+    animation: fadeIn 0.2s;
+}
+.message.user { align-self: flex-end; }
+.message.assistant { align-self: flex-start; }
+.message.system { align-self: center; font-style: italic; color: var(--text2); font-size: 12px; }
+.msg-bubble {
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: var(--surface2);
+    line-height: 1.5;
+    word-break: break-word;
+}
+.message.user .msg-bubble { background: var(--purple); }
+/* 心声样式 */
+.inner-voice {
+    display: inline-block;
+    font-style: italic;
+    color: #b0a0c0;
+    font-size: 13px;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin: 2px 0;
+}
+.suggest-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+}
+.suggest-chip {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.suggest-chip:hover { background: var(--gold); color: #000; }
+.raw-reply {
+    font-size: 11px; color: var(--text3);
+    background: #00000033; padding: 6px; border-radius: 8px;
+    margin-top: 4px; white-space: pre-wrap; max-height: 120px; overflow-y: auto;
+}
+/* 输入区 */
+.input-area {
+    padding: 8px 12px 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--surface2);
+    display: flex; gap: 8px; align-items: flex-end;
+}
+.input-area textarea {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--text3);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 15px;
+    resize: none;
+    max-height: 120px;
+    font-family: inherit;
+}
+.input-area button {
+    background: var(--gold);
+    border: none;
+    color: #000;
+    font-weight: bold;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+}
+.input-area button:disabled { opacity: 0.5; }
+/* 弹窗 */
+.modal-overlay {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: #000000cc; display:flex; align-items:center; justify-content:center;
+    z-index: 100;
+}
+.modal {
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: 16px;
+    padding: 20px;
+    width: 90%; max-width: 480px;
+    max-height: 80vh; overflow-y: auto;
+    color: var(--text);
+}
+.modal h3 { margin-bottom: 12px; color: var(--gold); }
+.modal label { display: block; margin: 8px 0 4px; color: var(--text2); font-size: 14px; }
+.modal input, .modal textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--text3);
+    color: var(--text);
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+.modal button {
+    background: var(--gold);
+    border: none;
+    color: #000;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin: 8px 4px 0 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+.modal button.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--text3); }
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.status-item { font-size: 13px; }
+.status-item span:first-child { color: var(--text2); }
+.affection-bar {
+    background: var(--surface2); height: 8px; border-radius: 4px;
+    margin: 8px 0; overflow: hidden;
+}
+.affection-fill {
+    height: 100%; background: var(--gold);
+    width: 0%;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <select class="world-select" id="worldSelect" onchange="switchWorld(this.value)"></select>
+    <button class="btn-icon" title="设置" onclick="showSettings()">⚙️</button>
+    <button class="btn-icon" title="图鉴" onclick="showArchive()">📜</button>
+    <button class="btn-icon" title="成就" onclick="showAchievements()">🏆</button>
+    <button class="btn-icon" title="新建世界" onclick="showCreateWorldModal()">➕</button>
+    <button class="btn-icon" title="编辑当前世界" onclick="showWorldEditor()">✏️</button>
+</div>
+
+<div class="npc-strip" id="npcStrip"></div>
+
+<div class="chat-container" id="chatContainer"></div>
+
+<div class="input-area">
+    <textarea id="msgInput" rows="1" placeholder="输入你的行动..." oninput="autoResize(this)"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">发送</button>
+</div>
+
+<script>
+// ==================== 核心配置 ====================
+const STORAGE_KEY = 'traveler_v9_npc';
+const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+const PRIVATE_PASSWORD = '123456';
+
+// 系统提示词（包含心声指令）
+const BASE_SYSTEM_PROMPT = `你是沉浸式成人角色扮演叙述者。第一人称。
+【铁律】每次回复末尾必须输出JSON：{"npc_met":"新角色或null","npc_description":"","affection_change":0,"event":"","location":"","time":""}
+若出现新角色，必须额外包含完整npc_status：{"gender":"","age":"","emotion":"","appearance":"","breasts":"","buttocks":"","vagina":"","pose":""}
+若无新角色，仅以上6字段。无变化输出{}。
+每次400~600字，露骨描写。末尾用【】提供2个行动建议。
+当需要表达角色内心想法时，请用（心声：xxx）格式包裹。`;
+
+const BASE_PROMPT_GENSHIN = `你是《原神》的沉浸式成人角色扮演叙述者。主角"空"（男，旅行者）。第一人称。${BASE_SYSTEM_PROMPT} 当前：蒙德·星落湖，清晨。`;
+const BASE_PROMPT_STARRAIL = `你是《崩坏：星穹铁道》的沉浸式成人角色扮演叙述者。主角"穹"（男，开拓者）。第一人称。${BASE_SYSTEM_PROMPT} 当前：黑塔空间站·主控舱段，星历8100年。`;
+const BASE_PROMPT_CUSTOM = `你是沉浸式成人奇幻世界叙述者。主角"旅人"（男）。第一人称。${BASE_SYSTEM_PROMPT} 当前：起始之森，破晓。`;
+
+const DEFAULT_WORLDS = {
+    genshin: { name:'原神', emoji:'🌍', protagonist:'空', prompt:BASE_PROMPT_GENSHIN, npcs:{}, messages:[] },
+    starrail: { name:'星穹铁道', emoji:'🚂', protagonist:'穹', prompt:BASE_PROMPT_STARRAIL, npcs:{}, messages:[] },
+    custom: { name:'自定义世界', emoji:'✨', protagonist:'旅人', prompt:BASE_PROMPT_CUSTOM, npcs:{}, messages:[] }
+};
+
+// ==================== 状态管理 ====================
+let appState = {
+    settings: { apiKey:'', model:'deepseek-chat', enableSearch:false, devMode:false },
+    currentWorld: 'genshin',
+    worlds: {},
+    memories: {},
+    achievements: [],
+    privateUnlocked: {},
+    privateData: {},
+    protagonistStatus: { name:'', gender:'', age:'', element:'', weapon:'', constellation:'', nation:'', condition:'', location:'', time:'' },
+    currentTargetNpc: null,
+    isSending: false
+};
+
+function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            appState = { ...appState, ...parsed };
+            if (!appState.worlds || Object.keys(appState.worlds).length === 0) {
+                appState.worlds = JSON.parse(JSON.stringify(DEFAULT_WORLDS));
+            }
+        } catch(e) { resetAll(); }
+    } else {
+        appState.worlds = JSON.parse(JSON.stringify(DEFAULT_WORLDS));
+    }
+}
+function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+}
+function resetAll() {
+    appState.worlds = JSON.parse(JSON.stringify(DEFAULT_WORLDS));
+    appState.memories = {};
+    appState.achievements = [];
+    appState.privateUnlocked = {};
+    appState.privateData = {};
+    appState.currentTargetNpc = null;
+    saveState();
+}
+
+// ==================== UI 渲染 ====================
+function renderAll() {
+    renderWorldSelect();
+    renderNpcStrip();
+    renderChat();
+    updateTargetChip();
+}
+function renderWorldSelect() {
+    const sel = document.getElementById('worldSelect');
+    sel.innerHTML = '';
+    Object.entries(appState.worlds).forEach(([id, w]) => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${w.emoji} ${w.name}`;
+        if (id === appState.currentWorld) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+function renderNpcStrip() {
+    const strip = document.getElementById('npcStrip');
+    strip.innerHTML = '';
+    const world = appState.worlds[appState.currentWorld];
+    if (!world || !world.npcs || Object.keys(world.npcs).length === 0) {
+        strip.style.display = 'none';
+        return;
+    }
+    strip.style.display = 'flex';
+    const entries = Object.entries(world.npcs).sort((a,b) => (b[1].lastInteract||0) - (a[1].lastInteract||0));
+    entries.forEach(([name, npc]) => {
+        const chip = document.createElement('span');
+        chip.className = 'npc-chip';
+        chip.textContent = name;
+        if (appState.currentTargetNpc === name) chip.classList.add('active-target');
+        chip.addEventListener('click', () => showNpcModal(name));
+        let timer;
+        chip.addEventListener('touchstart', (e) => { timer = setTimeout(() => setCurrentTarget(name), 500); });
+        chip.addEventListener('touchend', () => clearTimeout(timer));
+        chip.addEventListener('touchmove', () => clearTimeout(timer));
+        chip.addEventListener('mousedown', (e) => { timer = setTimeout(() => setCurrentTarget(name), 500); });
+        chip.addEventListener('mouseup', () => clearTimeout(timer));
+        chip.addEventListener('mouseleave', () => clearTimeout(timer));
+        strip.appendChild(chip);
+    });
+}
+function updateTargetChip() {
+    document.querySelectorAll('.npc-chip').forEach(c => {
+        c.classList.toggle('active-target', c.textContent === appState.currentTargetNpc);
+    });
+}
+function renderChat() {
+    const container = document.getElementById('chatContainer');
+    container.innerHTML = '';
+    const world = appState.worlds[appState.currentWorld];
+    if (!world || !world.messages) return;
+    world.messages.forEach((msg, idx) => {
+        appendMessageToDOM(msg, idx === world.messages.length-1);
+    });
+    container.scrollTop = container.scrollHeight;
+}
+function appendMessageToDOM(msg, isLatest) {
+    const container = document.getElementById('chatContainer');
+    const div = document.createElement('div');
+    div.className = `message ${msg.role}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    
+    // 解析心声标记（中文括号或方括号）
+    let html = msg.content
+        .replace(/（心声：([^）]+)）/g, '<span class="inner-voice">💭 $1</span>')
+        .replace(/【心声：([^】]+)】/g, '<span class="inner-voice">💭 $1</span>');
+    bubble.innerHTML = html;
+    
+    div.appendChild(bubble);
+    if (msg.role === 'assistant') {
+        const suggests = extractSuggests(msg.content);
+        if (suggests.length) {
+            const chipDiv = document.createElement('div');
+            chipDiv.className = 'suggest-chips';
+            suggests.forEach(s => {
+                const chip = document.createElement('span');
+                chip.className = 'suggest-chip';
+                chip.textContent = s;
+                chip.addEventListener('click', () => {
+                    document.getElementById('msgInput').value = s;
+                    document.getElementById('msgInput').dispatchEvent(new Event('input'));
+                    document.getElementById('msgInput').focus();
+                });
+                chipDiv.appendChild(chip);
+            });
+            div.appendChild(chipDiv);
+        }
+        if (appState.settings.devMode) {
+            const raw = document.createElement('div');
+            raw.className = 'raw-reply';
+            raw.textContent = msg.content;
+            div.appendChild(raw);
+        }
+    }
+    container.appendChild(div);
+}
+function extractSuggests(text) {
+    let suggests = [];
+    const matches = text.match(/【([^】]+)】/g);
+    if (matches) {
+        suggests = matches.map(m => m.replace(/[【】]/g, ''));
+        if (suggests.length > 0) return suggests.slice(0, 4);
+    }
+    const world = appState.worlds[appState.currentWorld];
+    if (world) {
+        const proto = world.protagonist || '主角';
+        suggests = [`继续向前探索`, `和${proto}交谈`, `观察四周`];
+    }
+    return suggests;
+}
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ==================== 世界操作 ====================
+function switchWorld(worldId) {
+    appState.currentWorld = worldId;
+    const w = appState.worlds[worldId];
+    appState.protagonistStatus.name = w.protagonist;
+    appState.currentTargetNpc = null;
+    saveState();
+    renderAll();
+}
+function showCreateWorldModal() {
+    const modal = createModal('新建世界');
+    modal.innerHTML += `
+        <label>世界名称</label><input id="newWorldName" value="新世界">
+        <label>主角姓名</label><input id="newWorldProto" value="旅人">
+        <label>系统提示词</label><textarea id="newWorldPrompt" rows="10">${BASE_PROMPT_CUSTOM}</textarea>
+        <br><button onclick="createWorld()">创建</button><button class="secondary" onclick="closeModal()">取消</button>
+    `;
+    document.body.appendChild(modal);
+}
+function createWorld() {
+    const name = document.getElementById('newWorldName').value.trim();
+    const proto = document.getElementById('newWorldProto').value.trim();
+    const prompt = document.getElementById('newWorldPrompt').value;
+    if (!name) return alert('名称不能为空');
+    const id = 'world_' + Date.now();
+    appState.worlds[id] = { name, emoji:'🌌', protagonist:proto, prompt, npcs:{}, messages:[] };
+    appState.currentWorld = id;
+    saveState();
+    closeModal();
+    renderAll();
+}
+function showWorldEditor() {
+    const world = appState.worlds[appState.currentWorld];
+    if (!world) return;
+    const modal = createModal('编辑当前世界');
+    modal.innerHTML += `
+        <label>世界名称</label><input id="editWorldName" value="${world.name}">
+        <label>主角姓名</label><input id="editWorldProto" value="${world.protagonist}">
+        <label>系统提示词（可修改）</label><textarea id="editWorldPrompt" rows="12">${world.prompt}</textarea>
+        <br><button onclick="saveWorldEdit()">保存</button><button class="secondary" onclick="closeModal()">取消</button>
+    `;
+    document.body.appendChild(modal);
+}
+function saveWorldEdit() {
+    const world = appState.worlds[appState.currentWorld];
+    world.name = document.getElementById('editWorldName').value.trim();
+    world.protagonist = document.getElementById('editWorldProto').value.trim();
+    world.prompt = document.getElementById('editWorldPrompt').value;
+    saveState();
+    closeModal();
+    renderAll();
+}
+
+// ==================== NPC 与对话目标 ====================
+function setCurrentTarget(name) {
+    appState.currentTargetNpc = name;
+    saveState();
+    updateTargetChip();
+}
+function showNpcModal(name) {
+    const world = appState.worlds[appState.currentWorld];
+    const npc = world.npcs[name];
+    if (!npc) return;
+    const aff = npc.affection || 0;
+    const status = npc.status || {};
+    const unlocked = appState.privateUnlocked[`${appState.currentWorld}_${name}`] || false;
+    const modal = createModal(`${name} 角色卡`);
+    const labelMap = {
+        gender:'性别', age:'年龄', emotion:'情绪', appearance:'外貌',
+        breasts:'胸部', buttocks:'臀部', vagina:'阴道', pose:'姿势'
+    };
+    modal.innerHTML += `
+        <p>${npc.description || '暂无描述'}</p>
+        <div>好感度 ${aff}/100</div>
+        <div class="affection-bar"><div class="affection-fill" style="width:${Math.min(aff,100)}%"></div></div>
+        <div class="status-grid">
+            ${Object.entries(status).map(([k,v]) => `<div class="status-item"><span>${labelMap[k] || k}:</span> ${v||'?'}</div>`).join('')}
+        </div>
+        ${aff >= 100 ? (unlocked ? `<button onclick="showPrivateEditor('${name}')">✏️ 私密档案</button>` : `<button onclick="showPrivatePasswordModal('${name}')">🔓 解锁私密档案</button>`) : ''}
+        <button class="secondary" onclick="deleteNpc('${name}')">🗑️ 删除角色</button>
+        <button class="secondary" onclick="closeModal()">关闭</button>
+    `;
+    document.body.appendChild(modal);
+}
+function deleteNpc(name) {
+    if (!confirm(`确定删除角色 ${name} 吗？`)) return;
+    delete appState.worlds[appState.currentWorld].npcs[name];
+    if (appState.currentTargetNpc === name) appState.currentTargetNpc = null;
+    saveState();
+    closeModal();
+    renderNpcStrip();
+}
+function showPrivatePasswordModal(name) {
+    const modal = createModal('私密档案密码');
+    modal.innerHTML += `
+        <input id="pwdInput" type="password" placeholder="输入密码">
+        <button onclick="checkPrivatePassword('${name}')">确认</button>
+        <button class="secondary" onclick="closeModal()">取消</button>
+    `;
+    document.body.appendChild(modal);
+}
+function checkPrivatePassword(name) {
+    if (document.getElementById('pwdInput').value === PRIVATE_PASSWORD) {
+        appState.privateUnlocked[`${appState.currentWorld}_${name}`] = true;
+        saveState();
+        closeModal();
+        showNpcModal(name);
+    } else alert('密码错误');
+}
+function showPrivateEditor(name) {
+    const key = `${appState.currentWorld}_${name}`;
+    let data = appState.privateData[key] || {};
+    const modal = createModal('编辑私密档案');
+    modal.innerHTML += `
+        <textarea id="privateJson" rows="12">${JSON.stringify(data, null, 2)}</textarea>
+        <button onclick="savePrivateData('${name}')">保存</button>
+        <button class="secondary" onclick="closeModal()">取消</button>
+    `;
+    document.body.appendChild(modal);
+}
+function savePrivateData(name) {
+    const key = `${appState.currentWorld}_${name}`;
+    try {
+        appState.privateData[key] = JSON.parse(document.getElementById('privateJson').value);
+        saveState();
+        closeModal();
+    } catch(e) { alert('JSON格式错误'); }
+}
+
+// ==================== 图鉴、成就 ====================
+function showArchive() {
+    const memories = appState.memories[appState.currentWorld] || [];
+    const modal = createModal('📜 旅途记忆');
+    const list = memories.slice(-20).reverse().map(m => `<p>${new Date(m.timestamp).toLocaleString()}: ${m.event}</p>`).join('');
+    modal.innerHTML += list || '<p>暂无记忆</p>';
+    modal.innerHTML += '<button class="secondary" onclick="closeModal()">关闭</button>';
+    document.body.appendChild(modal);
+}
+function showAchievements() {
+    const modal = createModal('🏆 成就');
+    modal.innerHTML += appState.achievements.length ? appState.achievements.map(a => `<p>${a.name} - ${new Date(a.timestamp).toLocaleString()}</p>`).join('') : '<p>暂无成就</p>';
+    modal.innerHTML += '<button class="secondary" onclick="closeModal()">关闭</button>';
+    document.body.appendChild(modal);
+}
+function checkAchievement() {
+    const world = appState.worlds[appState.currentWorld];
+    if (world && Object.keys(world.npcs).length > 0 && !appState.achievements.find(a=>a.name==='初次邂逅')) {
+        appState.achievements.push({ name:'初次邂逅', timestamp:Date.now() });
+    }
+    if (world && Object.values(world.npcs).some(n=>n.affection>=100) && !appState.achievements.find(a=>a.name==='羁绊满溢')) {
+        appState.achievements.push({ name:'羁绊满溢', timestamp:Date.now() });
+    }
+    saveState();
+}
+
+// ==================== 设置 ====================
+function showSettings() {
+    const modal = createModal('设置');
+    modal.innerHTML += `
+        <label>DeepSeek API Key</label><input id="apiKeyInput" value="${appState.settings.apiKey}">
+        <label>模型</label><input id="modelInput" value="${appState.settings.model}">
+        <label><input type="checkbox" id="searchCheck" ${appState.settings.enableSearch?'checked':''}> 联网搜索</label>
+        <label><input type="checkbox" id="devModeCheck" ${appState.settings.devMode?'checked':''}> 开发者模式（显示原始回复）</label>
+        <button onclick="saveSettings()">保存设置</button>
+        <button class="secondary" onclick="exportData()">导出数据</button>
+        <button class="secondary" onclick="importDataPrompt()">导入数据</button>
+        <button class="secondary" onclick="clearCurrentWorld()">清除当前世界数据</button>
+        <button class="secondary" onclick="fullReset()">完全重置</button>
+        <button class="secondary" onclick="closeModal()">取消</button>
+    `;
+    document.body.appendChild(modal);
+}
+function saveSettings() {
+    appState.settings.apiKey = document.getElementById('apiKeyInput').value.trim();
+    appState.settings.model = document.getElementById('modelInput').value.trim();
+    appState.settings.enableSearch = document.getElementById('searchCheck').checked;
+    appState.settings.devMode = document.getElementById('devModeCheck').checked;
+    saveState();
+    closeModal();
+}
+function exportData() {
+    const blob = new Blob([JSON.stringify(appState, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'traveler_backup.json';
+    a.click();
+}
+function importDataPrompt() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = JSON.parse(reader.result);
+                appState = { ...appState, ...data };
+                saveState();
+                closeModal();
+                renderAll();
+            } catch(ex) { alert('文件格式错误'); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+function clearCurrentWorld() {
+    if (!confirm('清除当前世界所有对话和NPC？')) return;
+    const world = appState.worlds[appState.currentWorld];
+    world.messages = [];
+    world.npcs = {};
+    appState.currentTargetNpc = null;
+    appState.memories[appState.currentWorld] = [];
+    saveState();
+    closeModal();
+    renderAll();
+}
+function fullReset() {
+    if (!confirm('完全重置所有数据？此操作不可恢复！')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+}
+
+// ==================== 通用弹窗 ====================
+function createModal(title) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modalOverlay';
+    overlay.innerHTML = `<div class="modal"><h3>${title}</h3></div>`;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    return overlay;
+}
+function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    if (overlay) overlay.remove();
+}
+
+// ==================== API 与消息发送 ====================
+async function sendMessage() {
+    if (appState.isSending) return;
+    const input = document.getElementById('msgInput');
+    const userMsg = input.value.trim();
+    if (!userMsg) return;
+    if (!appState.settings.apiKey) return alert('请先在设置中填入API Key');
+
+    const world = appState.worlds[appState.currentWorld];
+    world.messages.push({ role:'user', content:userMsg, timestamp:Date.now() });
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    saveState();
+    appendMessageToDOM({ role:'user', content:userMsg }, true);
+
+    appState.isSending = true;
+    document.getElementById('sendBtn').disabled = true;
+    const assistantMsg = { role:'assistant', content:'', timestamp:Date.now() };
+    world.messages.push(assistantMsg);
+    const bubble = createStreamingBubble();
+
+    try {
+        const messages = buildMessages(world);
+        const response = await fetch(API_URL, {
+            method:'POST',
+            headers: {
+                'Content-Type':'application/json',
+                'Authorization':`Bearer ${appState.settings.apiKey}`
+            },
+            body: JSON.stringify({
+                model: appState.settings.model,
+                messages,
+                stream: true,
+                max_tokens: 1024,
+                temperature: 0.95
+            })
+        });
+        if (!response.ok) throw new Error(`API错误 ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, {stream:true});
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') break;
+                try {
+                    const json = JSON.parse(data);
+                    const content = json.choices[0]?.delta?.content || '';
+                    assistantMsg.content += content;
+                    bubble.textContent = assistantMsg.content;
+                    document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+                } catch(e){}
+            }
+        }
+    } catch(e) {
+        assistantMsg.content = `[系统错误: ${e.message}]`;
+        bubble.textContent = assistantMsg.content;
+    }
+    appState.isSending = false;
+    document.getElementById('sendBtn').disabled = false;
+    processJson(assistantMsg.content);
+    saveState();
+    renderNpcStrip();
+    checkAchievement();
+}
+
+function buildMessages(world) {
+    let history = world.messages.slice(-6);
+    const maxLen = 500;
+    history = history.map(m => ({
+        role: m.role,
+        content: m.content.length > maxLen ? m.content.slice(0, maxLen) + '...' : m.content
+    }));
+    const systemMsg = world.prompt;
+    return [
+        { role:'system', content: systemMsg },
+        ...history
+    ];
+}
+
+function createStreamingBubble() {
+    const container = document.getElementById('chatContainer');
+    const div = document.createElement('div');
+    div.className = 'message assistant';
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = '...';
+    div.appendChild(bubble);
+    container.appendChild(div);
+    return bubble;
+}
+
+function processJson(text) {
+    let jsonStr = null;
+    const codeMatch = text.match(/```json\s*([\s\S]*?)```/);
+    if (codeMatch) jsonStr = codeMatch[1].trim();
+    else {
+        const braceMatch = text.match(/\{[\s\S]*\}/);
+        if (braceMatch) jsonStr = braceMatch[0];
+    }
+    if (!jsonStr) return;
+    try {
+        const data = JSON.parse(jsonStr);
+        const world = appState.worlds[appState.currentWorld];
+        if (data.npc_met && data.npc_met !== 'null') {
+            if (!world.npcs[data.npc_met]) {
+                world.npcs[data.npc_met] = {
+                    affection: 100,
+                    description: data.npc_description || '',
+                    status: data.npc_status || {},
+                    metAt: Date.now(),
+                    lastInteract: Date.now()
+                };
+            } else {
+                if (data.npc_description) world.npcs[data.npc_met].description = data.npc_description;
+                if (data.npc_status) world.npcs[data.npc_met].status = data.npc_status;
+                world.npcs[data.npc_met].lastInteract = Date.now();
+            }
+        }
+        if (data.affection_change) {
+            const target = appState.currentTargetNpc;
+            if (target && world.npcs[target]) {
+                world.npcs[target].affection = (world.npcs[target].affection||0) + data.affection_change;
+            }
+        }
+        if (data.event) {
+            if (!appState.memories[appState.currentWorld]) appState.memories[appState.currentWorld] = [];
+            appState.memories[appState.currentWorld].push({ event:data.event, timestamp:Date.now() });
+        }
+        if (data.location) appState.protagonistStatus.location = data.location;
+        if (data.time) appState.protagonistStatus.time = data.time;
+    } catch(e) { console.log('JSON解析失败', e); }
+}
+
+// ==================== 初始化 ====================
+loadState();
+if (!appState.worlds || Object.keys(appState.worlds).length === 0) {
+    appState.worlds = JSON.parse(JSON.stringify(DEFAULT_WORLDS));
+}
+renderAll();
+document.getElementById('msgInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+</script>
+</body>
+</html>
