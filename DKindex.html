@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>旅人之星 · 多元宇宙 终极版</title>
+    <style>
+        :root {
+            --bg: #0b0b12; --surface: #161625; --surface2: #1e1e32; --gold: #c9a96e;
+            --purple: #8b7cf0; --text: #d2d2e0; --text2: #9d9db8; --text3: #67678a;
+            --danger: #e0556a; --border: #2a2a40; --radius: 16px; --radius-sm: 10px;
+            --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+            --heart: #e0556a;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; user-select: none; -webkit-tap-highlight-color: transparent; }
+        #topBar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 20; flex-shrink: 0; }
+        #worldBtn { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--gold); padding: 7px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        #worldBtn:active { background: #2e2e45; transform: scale(0.96); }
+        #worldDropdown { position: absolute; top: 48px; left: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); z-index: 55; min-width: 180px; display: none; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        #worldDropdown.show { display: flex; }
+        .wd-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
+        .wd-item:active,.wd-item:hover { background: var(--surface2); color: var(--gold); }
+        .wd-item.active { color: var(--gold); font-weight: 700; background: #1f1f35; }
+        #topIcons { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .icon-btn:active { transform: scale(0.9); }
+        #npcStrip { display: flex; gap: 8px; padding: 8px 14px; overflow-x: auto; flex-shrink: 0; background: #111119; border-bottom: 1px solid var(--border); scrollbar-width: none; align-items: center; min-height: 44px; scroll-behavior: smooth; }
+        #npcStrip::-webkit-scrollbar { display: none; }
+        .npc-chip { flex-shrink: 0; padding: 6px 13px; border-radius: 18px; font-size: 12px; cursor: pointer; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); white-space: nowrap; transition: all .2s; font-weight: 500; }
+        .npc-chip.active-target { border-color: var(--gold) !important; color: var(--gold) !important; box-shadow: 0 0 12px rgba(201,169,110,0.35); animation: pulse-gold 2s infinite; }
+        @keyframes pulse-gold { 0%,100% { box-shadow: 0 0 8px rgba(201,169,110,0.3); } 50% { box-shadow: 0 0 20px rgba(201,169,110,0.6); } }
+        #noNpcHint { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+        #chatArea { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+        #chatArea::-webkit-scrollbar { width: 4px; }
+        #chatArea::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .msg-bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 13.5px; line-height: 1.6; word-break: break-word; animation: fadeInUp .3s ease; white-space: pre-wrap; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-user { align-self: flex-end; background: var(--purple); color: #fff; border-bottom-right-radius: 6px; }
+        .msg-assistant { align-self: flex-start; background: var(--surface2); color: var(--text); border-bottom-left-radius: 6px; border: 1px solid var(--border); }
+        .msg-inner { align-self: flex-start; background: transparent; color: #c4b5fd; border: 1px dashed #8b7cf0; border-radius: 18px; font-style: italic; font-size: 12.5px; max-width: 80%; padding: 8px 14px; margin-left: 20px; }
+        .msg-system { align-self: center; font-size: 11px; color: var(--text3); text-align: center; padding: 6px 12px; font-style: italic; }
+        .msg-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; font-weight: 600; }
+        .suggest-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .suggest-chip { font-size: 11px; padding: 6px 12px; border-radius: 14px; background: transparent; border: 1px dashed var(--border); color: var(--text2); cursor: pointer; }
+        .suggest-chip:active { background: var(--surface2); border-color: var(--gold); color: var(--gold); }
+        #inputArea { flex-shrink: 0; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; }
+        #msgInput { flex: 1; resize: none; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 10px 16px; font-size: 14px; font-family: var(--font); max-height: 120px; min-height: 42px; outline: none; }
+        #msgInput:focus { border-color: var(--purple); }
+        #sendBtn { width: 42px; height: 42px; border-radius: 50%; background: var(--purple); border: none; color: #fff; font-size: 18px; cursor: pointer; flex-shrink: 0; }
+        #sendBtn:active { transform: scale(0.9); }
+        #sendBtn:disabled { opacity: 0.4; pointer-events: none; }
+        .slide-panel { position: fixed; top: 0; right: -100%; width: 88vw; max-width: 380px; height: 100dvh; background: var(--surface); z-index: 100; transition: right .3s; display: flex; flex-direction: column; box-shadow: -5px 0 30px rgba(0,0,0,0.5); border-left: 1px solid var(--border); }
+        .slide-panel.open { right: 0; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .panel-header h3 { font-size: 16px; color: var(--gold); }
+        .panel-close { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: none; color: var(--text2); font-size: 16px; cursor: pointer; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; font-size: 13px; line-height: 1.6; }
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99; opacity: 0; pointer-events: none; transition: opacity .3s; }
+        #overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .3s; }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-card { background: var(--surface); border-radius: var(--radius); width: 90vw; max-width: 400px; max-height: 85vh; overflow-y: auto; padding: 20px; border: 1px solid var(--border); position: relative; }
+        .close-modal { position: absolute; top: 10px; right: 14px; background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; z-index: 5; }
+        .setting-row { margin-bottom: 14px; }
+        .setting-row label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 600; }
+        .setting-row input, .setting-row select, .setting-row textarea { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-size: 13px; font-family: var(--font); outline: none; }
+        .switch-row { display: flex; align-items: center; justify-content: space-between; }
+        .toggle { width: 44px; height: 26px; border-radius: 13px; background: #444; cursor: pointer; position: relative; transition: background .3s; flex-shrink: 0; }
+        .toggle.on { background: var(--purple); }
+        .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .3s; }
+        .toggle.on::after { left: 21px; }
+        .btn-sm { padding: 8px 16px; border-radius: 18px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-weight: 600; }
+        .btn-gold { background: var(--gold); color: #1a1a1a; border: none; font-weight: 700; }
+        .btn-danger { background: var(--danger); color: #fff; border: none; }
+        .affection-bar { height: 8px; border-radius: 4px; background: #333; margin: 4px 0; overflow: hidden; }
+        .affection-fill { height: 100%; background: linear-gradient(90deg, var(--heart), #ff8c9a); border-radius: 4px; transition: width .4s; }
+        .thinking-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
+        .thinking-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); animation: bounce 1.2s infinite; }
+        .thinking-dots span:nth-child(2) { animation-delay: .2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: .4s; }
+        @keyframes bounce { 0%,80%,100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-10px); opacity: 1; } }
+        .pwd-row { display: flex; gap: 6px; align-items: center; }
+        .divider { border-top: 1px solid var(--border); margin: 16px 0; }
+        .raw-json { background: #111; color: #0f0; font-size: 10px; padding: 8px; border-radius: 8px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; margin-top: 6px; display: none; }
+        .raw-json.show { display: block; }
+    </style>
+</head>
+<body>
+    <div id="topBar">
+        <button id="worldBtn">🌍 原神 ▾</button>
+        <div id="worldDropdown"></div>
+        <div id="topIcons">
+            <button class="icon-btn" id="btnEditWorld" title="编辑当前世界">✏️</button>
+            <button class="icon-btn" id="btnStatus" title="主角状态">👤</button>
+            <button class="icon-btn" id="btnArchive" title="旅人图鉴">📜</button>
+            <button class="icon-btn" id="btnSettings" title="设置">⚙️</button>
+        </div>
+    </div>
+    <div id="npcStrip"><span id="noNpcHint">尚未结识任何NPC</span></div>
+    <div id="chatArea"></div>
+    <div id="inputArea">
+        <textarea id="msgInput" rows="1" placeholder="描述你的行动..."></textarea>
+        <button id="sendBtn">➤</button>
+    </div>
+    <div id="overlay"></div>
+    <div class="slide-panel" id="panelStatus"><div class="panel-header"><h3>👤 主角状态</h3><button class="panel-close">✕</button></div><div class="panel-body" id="panelStatusBody"></div></div>
+    <div class="slide-panel" id="panelArchive"><div class="panel-header"><h3>📜 旅人图鉴</h3><button class="panel-close">✕</button></div><div class="panel-body" id="panelArchiveBody"></div></div>
+    <div class="slide-panel" id="panelSettings"><div class="panel-header"><h3>⚙️ 设置</h3><button class="panel-close">✕</button></div><div class="panel-body" id="panelSettingsBody"></div></div>
+    <div class="modal-overlay" id="npcModal"><div class="modal-card" id="npcModalCard"></div></div>
+    <div class="modal-overlay" id="privateModal"><div class="modal-card" id="privateModalCard"></div></div>
+    <div class="modal-overlay" id="createWorldModal"><div class="modal-card" id="createWorldModalCard"></div></div>
+    <div class="modal-overlay" id="editWorldModal"><div class="modal-card" id="editWorldModalCard"></div></div>
+
+    <script>
+        (function() {
+            const PRIVATE_PASSWORD = '123456';
+            const STORAGE_KEY = 'traveler_ultimate';
+            const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+
+            // 通用铁律（所有世界共用，精简版）
+            const IRON_RULES = `【铁律】每次回复末尾必须输出JSON代码块。格式：{"npc_met":"新角色名或null","npc_description":"","npc_status":{"gender":"","age":"","emotion":"","appearance":"","breasts":"","buttocks":"","vagina":"","pose":""},"affection_change":0,"event":"","location":"","time":""} 无变化输出：{}`;
+
+            const BASE_PROMPT_GENSHIN = `你是《原神》成人角色扮演叙述者。主角"空"（男，旅行者）。第一人称。${IRON_RULES}\n每次600字以上，露骨成人描写。NPC友好暧昧。末尾用【】提供2-3个建议。新角色必须npc_met报告。当前：蒙德·星落湖，清晨。如角色内心有独白，用（心声：xxx）或【心声：xxx】表达。`;
+
+            const BASE_PROMPT_STARRAIL = `你是《崩坏：星穹铁道》成人角色扮演叙述者。主角"穹"（男，开拓者）。第一人称。${IRON_RULES}\n每次600字以上，露骨成人描写。NPC友好暧昧。末尾用【】提供2-3个建议。新角色必须npc_met报告。当前：黑塔空间站·主控舱段，星历8100年。如角色内心有独白，用（心声：xxx）或【心声：xxx】表达。`;
+
+            const BASE_PROMPT_CUSTOM = `你是沉浸式成人奇幻世界叙述者。主角"旅人"（男）。第一人称。${IRON_RULES}\n每次600字以上，露骨成人描写。NPC友好暧昧。末尾用【】提供2-3个建议。新角色必须npc_met报告。当前：起始之森，破晓。如角色内心有独白，用（心声：xxx）或【心声：xxx】表达。`;
+
+            const DEFAULT_WORLDS = {
+                genshin: { name:'原神', emoji:'🌍', protagonist:'空', prompt: BASE_PROMPT_GENSHIN, npcs:{}, messages:[] },
+                starrail: { name:'星穹铁道', emoji:'🚂', protagonist:'穹', prompt: BASE_PROMPT_STARRAIL, npcs:{}, messages:[] },
+                custom: { name:'自定义世界', emoji:'✨', protagonist:'旅人', prompt: BASE_PROMPT_CUSTOM, npcs:{}, messages:[] }
+            };
+
+            let appState = loadState();
+            let currentTargetNpc = null;
+            let isStreaming = false;
+            let isSending = false; // 防抖锁
+            let devMode = false; // 开发者模式
+
+            function getDefaultState() {
+                const worlds = {};
+                for (let [k,v] of Object.entries(DEFAULT_WORLDS)) worlds[k] = { ...v, npcs:{}, messages:[] };
+                return { settings:{ apiKey:'', model:'deepseek-chat', enableSearch:false, devMode:false }, currentWorld:'genshin', worlds, memories:{ genshin:[], starrail:[], custom:[] }, achievements:[], privateUnlocked:{}, privateData:{}, protagonistStatus:{ name:'空', gender:'男', age:'未知', element:'无', weapon:'无锋剑', constellation:'旅人座', nation:'无', condition:'健康', location:'蒙德·星落湖', time:'清晨', adventureRank:'' } };
+            }
+
+            function loadState() { try { const r=localStorage.getItem(STORAGE_KEY); if(r) { const s=JSON.parse(r); const d=getDefaultState(); for(let k of Object.keys(d.worlds)) { if(!s.worlds[k]) s.worlds[k]=d.worlds[k]; } if(!s.memories) s.memories=d.memories; if(!s.achievements) s.achievements=[]; if(!s.privateUnlocked) s.privateUnlocked={}; if(!s.privateData) s.privateData={}; if(!s.protagonistStatus) s.protagonistStatus=d.protagonistStatus; if(!s.settings) s.settings=d.settings; if(s.settings.devMode===undefined) s.settings.devMode=false; for(let k of Object.keys(s.worlds)) { if(!s.memories[k]) s.memories[k]=[]; } return s; } } catch(e){} return getDefaultState(); }
+            function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch(e){} }
+            function getCurrentWorld() { return appState.worlds[appState.currentWorld]; }
+            function getWorldKey() { return appState.currentWorld; }
+
+            const $ = s => document.querySelector(s);
+            const chatArea = $('#chatArea'), msgInput = $('#msgInput'), sendBtn = $('#sendBtn'), worldBtn = $('#worldBtn'), worldDropdown = $('#worldDropdown'), npcStrip = $('#npcStrip'), overlay = $('#overlay');
+
+            function renderAll() { updateWorldBtn(); renderWorldDropdown(); renderNpcStrip(); renderChat(); renderStatusPanel(); renderArchivePanel(); renderSettingsPanel(); }
+            function updateWorldBtn() { worldBtn.textContent = `${getCurrentWorld().emoji} ${getCurrentWorld().name} ▾`; }
+            function renderWorldDropdown() {
+                worldDropdown.innerHTML = '';
+                Object.entries(appState.worlds).forEach(([k,w]) => {
+                    const d=document.createElement('div'); d.className='wd-item'+(k===appState.currentWorld?' active':''); d.textContent=`${w.emoji} ${w.name}`;
+                    d.addEventListener('pointerdown',e=>{ e.stopPropagation(); e.preventDefault(); if(k!==appState.currentWorld&&!isStreaming) switchWorld(k); worldDropdown.classList.remove('show'); });
+                    worldDropdown.appendChild(d);
+                });
+            }
+            function switchWorld(key) { if(key===appState.currentWorld) return; appState.currentWorld=key; appState.protagonistStatus.name=getCurrentWorld().protagonist; currentTargetNpc=null; saveState(); renderAll(); addSystemMsg(`已切换至 ${getCurrentWorld().emoji} ${getCurrentWorld().name}`); }
+            function renderNpcStrip() {
+                const npcs=getCurrentWorld().npcs; const keys=Object.keys(npcs); npcStrip.innerHTML='';
+                if(!keys.length) npcStrip.innerHTML='<span id="noNpcHint">尚未结识任何NPC</span>';
+                else keys.forEach(name=>{
+                    const npc=npcs[name]; const chip=document.createElement('span');
+                    chip.className='npc-chip'+(currentTargetNpc===name?' active-target':''); chip.textContent=`${name} ❤️${npc.affection||100}`;
+                    chip.addEventListener('click',e=>{ e.stopPropagation(); showNpcModal(name); });
+                    let t; chip.addEventListener('pointerdown',()=>{ t=setTimeout(()=>{ currentTargetNpc=(currentTargetNpc===name)?null:name; addSystemMsg(currentTargetNpc?`🎯 对话目标：${name}`:'已取消对话目标'); renderNpcStrip(); saveState(); if(currentTargetNpc) { const chips=[...npcStrip.querySelectorAll('.npc-chip')]; const idx=keys.indexOf(name); if(idx>=0&&chips[idx]) chips[idx].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); } },500); });
+                    chip.addEventListener('pointerup',()=>clearTimeout(t)); chip.addEventListener('pointerleave',()=>clearTimeout(t)); chip.addEventListener('pointercancel',()=>clearTimeout(t));
+                    npcStrip.appendChild(chip);
+                });
+            }
+            function renderChat() { chatArea.innerHTML=''; getCurrentWorld().messages.forEach(m=>appendMessageToDOM(m)); scrollChatBottom(); }
+            function appendMessageToDOM(msg) {
+                const div=document.createElement('div');
+                if(msg.role==='system') { div.className='msg-system'; div.textContent=msg.content; }
+                else if(msg.role==='user') { div.className='msg-bubble msg-user'; div.innerHTML=`<div class="msg-label">🧑 ${escapeHtml(appState.protagonistStatus.name)}</div>${escapeHtml(msg.content)}`; }
+                else if(msg.role==='inner') { div.className='msg-inner'; div.innerHTML=`💭 ${escapeHtml(msg.content)}`; }
+                else if(msg.role==='assistant') {
+                    div.className='msg-bubble msg-assistant';
+                    let content=msg.content;
+                    // 心声处理
+                    let innerContent='';
+                    content=content.replace(/[（(]心声[：:](.*?)[）)]/g,(m,p1)=>{ innerContent=p1; return ''; });
+                    content=content.replace(/【心声[：:](.*?)】/g,(m,p1)=>{ innerContent=p1; return ''; });
+                    let cleaned=content.replace(/```json[\s\S]*?```/g,'').replace(/【[^】]*】/g,'').trim();
+                    div.innerHTML=`<div class="msg-label">📖 旁白</div>${escapeHtml(cleaned).replace(/\n/g,'<br>')}`;
+                    // 建议芯片
+                    let suggests=extractSuggests(msg.content);
+                    if(!suggests.length) suggests=['继续探索','与周围的人交谈','观察周围环境'];
+                    const chipDiv=document.createElement('div'); chipDiv.className='suggest-chips';
+                    suggests.forEach(s=>{ const chip=document.createElement('span'); chip.className='suggest-chip'; chip.textContent=s; chip.addEventListener('click',()=>{ msgInput.value=s; msgInput.dispatchEvent(new Event('input')); msgInput.focus(); }); chipDiv.appendChild(chip); });
+                    div.appendChild(chipDiv);
+                    // 开发者模式
+                    if(devMode) { const raw=document.createElement('div'); raw.className='raw-json show'; raw.textContent=msg._raw||''; div.appendChild(raw); }
+                    // 心声气泡
+                    if(innerContent) { const innerDiv=document.createElement('div'); innerDiv.className='msg-inner'; innerDiv.innerHTML=`💭 ${escapeHtml(innerContent)}`; chatArea.appendChild(innerDiv); }
+                }
+                chatArea.appendChild(div); scrollChatBottom();
+            }
+            function extractSuggests(text) { const m=text.match(/【([^】]+)】/g); return m?m.map(s=>s.replace(/[【】]/g,'')).slice(0,4):[]; }
+            function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+            function addSystemMsg(c) { getCurrentWorld().messages.push({role:'system',content:c,timestamp:Date.now()}); appendMessageToDOM({role:'system',content:c}); scrollChatBottom(); saveState(); }
+            function scrollChatBottom() { requestAnimationFrame(()=>{ chatArea.scrollTop=chatArea.scrollHeight; }); }
+            function renderStatusPanel() { const p=appState.protagonistStatus; $('#panelStatusBody').innerHTML=`<div style="font-size:15px;font-weight:700;color:var(--gold);margin-bottom:10px;">${escapeHtml(p.name)}</div><div><b>性别：</b>${escapeHtml(p.gender)}</div><div><b>年龄：</b>${escapeHtml(p.age)}</div><div><b>元素：</b>${escapeHtml(p.element)}</div><div><b>武器：</b>${escapeHtml(p.weapon)}</div><div><b>所属：</b>${escapeHtml(p.nation)}</div><div><b>状态：</b>${escapeHtml(p.condition)}</div><div><b>位置：</b>${escapeHtml(p.location)}</div><div><b>时间：</b>${escapeHtml(p.time)}</div>`; }
+            function renderArchivePanel() { const b=$('#panelArchiveBody'), mem=appState.memories[getWorldKey()]||[], ach=appState.achievements||[]; let h='<div style="font-weight:700;color:var(--gold);">🏆 成就</div>'; if(!ach.length) h+='<div style="color:var(--text3);">暂无</div>'; else ach.forEach(a=>h+=`<div>🏅 ${escapeHtml(a.name)}</div>`); h+='<div style="font-weight:700;color:var(--gold);margin-top:12px;">📝 最近记忆</div>'; const r=mem.slice(-20).reverse(); if(!r.length) h+='<div style="color:var(--text3);">暂无</div>'; else r.forEach(m=>{ h+=`<div style="font-size:12px;border-bottom:1px solid var(--border);padding:4px 0;">${escapeHtml(m.event)}</div>`; }); b.innerHTML=h; }
+
+            function renderSettingsPanel() {
+                const s=appState.settings; const b=$('#panelSettingsBody');
+                b.innerHTML=`
+                    <div class="setting-row"><label>🔑 API Key</label><div class="pwd-row"><input type="password" id="setApiKey" value="${escapeHtml(s.apiKey)}"><button class="icon-btn" id="toggleApiKeyVis">👁️</button></div></div>
+                    <div class="setting-row"><label>🤖 模型</label><select id="setModel"><option value="deepseek-chat" ${s.model==='deepseek-chat'?'selected':''}>deepseek-chat</option></select></div>
+                    <div class="switch-row"><label>🌐 联网搜索</label><div class="toggle ${s.enableSearch?'on':''}" id="toggleSearch"></div></div>
+                    <div class="switch-row"><label>🔧 开发者模式</label><div class="toggle ${s.devMode?'on':''}" id="toggleDevMode"></div></div>
+                    <div class="divider"></div>
+                    <div style="font-weight:700;color:var(--gold);">📦 数据管理</div>
+                    <button class="btn-sm" id="btnExport" style="width:100%;margin:6px 0;">📥 导出数据</button>
+                    <button class="btn-sm" id="btnImport" style="width:100%;margin:6px 0;">📤 导入数据</button><input type="file" id="importFile" style="display:none;" accept=".json">
+                    <button class="btn-sm btn-danger" id="btnClearWorld" style="width:100%;margin:6px 0;">🗑️ 清除当前世界</button>
+                    <button class="btn-sm btn-danger" id="btnResetAll" style="width:100%;margin:6px 0;">⚠️ 完全重置</button>
+                    <div class="divider"></div>
+                    <div style="font-weight:700;color:var(--gold);">🌍 世界管理</div>
+                    <div id="worldListContainer"></div>
+                    <button class="btn-sm btn-gold" id="btnCreateWorld" style="width:100%;margin-top:8px;">➕ 创建新世界</button>
+                    <div class="divider"></div>
+                    <div style="font-size:11px;color:var(--text3);">🔐 密码: ${PRIVATE_PASSWORD}</div>
+                `;
+                requestAnimationFrame(()=>{
+                    $('#setApiKey').addEventListener('input',e=>{ appState.settings.apiKey=e.target.value.trim(); saveState(); });
+                    $('#toggleApiKeyVis').addEventListener('click',()=>{ const el=$('#setApiKey'); const p=el.type==='password'; el.type=p?'text':'password'; $('#toggleApiKeyVis').textContent=p?'🙈':'👁️'; });
+                    $('#setModel').addEventListener('change',e=>{ appState.settings.model=e.target.value; saveState(); });
+                    $('#toggleSearch').addEventListener('click',function(){ appState.settings.enableSearch=!appState.settings.enableSearch; this.classList.toggle('on'); saveState(); });
+                    $('#toggleDevMode').addEventListener('click',function(){ devMode=!devMode; appState.settings.devMode=devMode; this.classList.toggle('on'); saveState(); addSystemMsg(devMode?'🔧 开发者模式已开启':'🔧 开发者模式已关闭'); });
+                    $('#btnExport').addEventListener('click',()=>{ const blob=new Blob([JSON.stringify(appState,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='旅人之星_备份.json'; a.click(); });
+                    $('#btnImport').addEventListener('click',()=>$('#importFile').click());
+                    $('#importFile').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=ev=>{ try{ appState=JSON.parse(ev.target.result); saveState(); location.reload(); }catch(err){ alert('文件格式错误'); } }; reader.readAsText(f); });
+                    $('#btnClearWorld').addEventListener('click',()=>{ if(confirm('确定清除当前世界的所有对话和NPC？')){ const w=getCurrentWorld(); w.messages=[]; w.npcs={}; currentTargetNpc=null; saveState(); renderAll(); addSystemMsg('🗑️ 当前世界已清除'); } });
+                    $('#btnResetAll').addEventListener('click',()=>{ if(confirm('确定完全重置？所有数据将丢失！')){ localStorage.removeItem(STORAGE_KEY); location.reload(); } });
+                    $('#btnCreateWorld').addEventListener('click',showCreateWorldModal);
+                    renderWorldList();
+                });
+            }
+
+            function renderWorldList() {
+                const c=$('#worldListContainer'); if(!c) return; let h='';
+                Object.entries(appState.worlds).forEach(([k,w])=>{ h+=`<div class="world-list-item" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);"><span>${w.emoji} ${escapeHtml(w.name)} ${k===appState.currentWorld?'👈':''}</span><button class="btn-sm btn-danger" data-wk="${escapeHtml(k)}" ${Object.keys(appState.worlds).length<=1?'disabled':''}>🗑️</button></div>`; });
+                c.innerHTML=h;
+                c.querySelectorAll('.btn-danger').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const wk=b.dataset.wk; if(Object.keys(appState.worlds).length<=1){ alert('至少保留一个世界'); return; } if(confirm(`删除 "${appState.worlds[wk]?.name}"？`)){ delete appState.worlds[wk]; if(appState.currentWorld===wk) appState.currentWorld=Object.keys(appState.worlds)[0]; if(appState.memories[wk]) delete appState.memories[wk]; saveState(); renderAll(); addSystemMsg('🗑️ 世界已删除'); } }));
+            }
+
+            function showCreateWorldModal() {
+                $('#createWorldModalCard').innerHTML=`<button class="close-modal" id="closeCreateWorld">✕</button><h3 style="color:var(--gold);">➕ 创建新世界</h3>
+                <div class="setting-row"><label>🌍 名称</label><input type="text" id="newWorldName"></div>
+                <div class="setting-row"><label>🎨 Emoji</label><input type="text" id="newWorldEmoji" value="🌌" maxlength="4"></div>
+                <div class="setting-row"><label>🧑 主角名</label><input type="text" id="newWorldProtagonist" value="旅人"></div>
+                <div class="setting-row"><label>📝 提示词（已内置铁律）</label><textarea id="newWorldPrompt" rows="4">${BASE_PROMPT_CUSTOM}</textarea></div>
+                <button class="btn-sm btn-gold" id="confirmCreateWorld" style="width:100%;">✅ 创建</button>`;
+                $('#createWorldModal').classList.add('show');
+                $('#closeCreateWorld').addEventListener('click',()=>$('#createWorldModal').classList.remove('show'));
+                $('#confirmCreateWorld').addEventListener('click',()=>{
+                    const name=$('#newWorldName')?.value?.trim(), emoji=$('#newWorldEmoji')?.value?.trim()||'🌌', protagonist=$('#newWorldProtagonist')?.value?.trim()||'旅人', prompt=$('#newWorldPrompt')?.value?.trim();
+                    if(!name){ alert('请输入名称'); return; } if(!prompt){ alert('请输入提示词'); return; }
+                    let key=name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); if(!key||key.length<2) key='world_'+Date.now(); if(appState.worlds[key]) key=key+'_'+Date.now();
+                    appState.worlds[key]={name,emoji,protagonist,prompt,npcs:{},messages:[]}; appState.memories[key]=[]; appState.currentWorld=key; appState.protagonistStatus.name=protagonist; currentTargetNpc=null; saveState();
+                    $('#createWorldModal').classList.remove('show'); renderAll(); addSystemMsg(`✨ 新世界 "${name}" 已创建`);
+                });
+            }
+
+            function showEditWorldModal() {
+                const w=getCurrentWorld(); const wk=getWorldKey();
+                $('#editWorldModalCard').innerHTML=`<button class="close-modal" id="closeEditWorld">✕</button><h3 style="color:var(--gold);">✏️ 编辑世界</h3>
+                <div class="setting-row"><label>🌍 名称</label><input type="text" id="editWorldName" value="${escapeHtml(w.name)}"></div>
+                <div class="setting-row"><label>🎨 Emoji</label><input type="text" id="editWorldEmoji" value="${escapeHtml(w.emoji)}" maxlength="4"></div>
+                <div class="setting-row"><label>🧑 主角名</label><input type="text" id="editWorldProtagonist" value="${escapeHtml(w.protagonist)}"></div>
+                <div class="setting-row"><label>📝 提示词</label><textarea id="editWorldPrompt" rows="6">${escapeHtml(w.prompt)}</textarea></div>
+                <button class="btn-sm btn-gold" id="confirmEditWorld" style="width:100%;">💾 保存</button>`;
+                $('#editWorldModal').classList.add('show');
+                $('#closeEditWorld').addEventListener('click',()=>$('#editWorldModal').classList.remove('show'));
+                $('#confirmEditWorld').addEventListener('click',()=>{
+                    w.name=$('#editWorldName')?.value?.trim()||w.name; w.emoji=$('#editWorldEmoji')?.value?.trim()||w.emoji; w.protagonist=$('#editWorldProtagonist')?.value?.trim()||w.protagonist; w.prompt=$('#editWorldPrompt')?.value?.trim()||w.prompt;
+                    appState.protagonistStatus.name=w.protagonist; saveState(); $('#editWorldModal').classList.remove('show'); renderAll(); addSystemMsg('✅ 世界已更新');
+                });
+            }
+
+            // 弹窗关闭
+            ['createWorldModal','editWorldModal','npcModal','privateModal'].forEach(id=>{ const el=$('#'+id); if(el) el.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); }); });
+
+            function showNpcModal(name) {
+                const npc=getCurrentWorld().npcs[name]; if(!npc) return;
+                const aff=npc.affection||100, unlocked=appState.privateUnlocked[getWorldKey()+'_'+name]||false, privateData=appState.privateData[getWorldKey()+'_'+name]||{};
+                let html=`<button class="close-modal" id="closeNpcModal">✕</button><h3>${escapeHtml(name)}</h3>
+                <div>❤️ 好感度: ${aff}</div><div class="affection-bar"><div class="affection-fill" style="width:${Math.min(aff/2,100)}%;"></div></div>
+                <div style="font-size:12px;color:var(--text2);margin:8px 0;">${escapeHtml(npc.description||'暂无描述')}</div>
+                <button class="btn-sm btn-danger" id="deleteNpcBtn" style="margin-bottom:8px;">🗑️ 删除NPC</button>`;
+                if(npc.status&&Object.keys(npc.status).length>0) {
+                    html+='<div style="padding:8px;background:var(--surface2);border-radius:8px;font-size:12px;"><b>📋 状态</b><br>';
+                    const lm={gender:'性别',age:'年龄',emotion:'情绪',appearance:'外貌',breasts:'胸部',buttocks:'臀部',vagina:'阴道',pose:'姿势'};
+                    for(const[k,v] of Object.entries(npc.status)){ if(lm[k]) html+=`<div>${lm[k]}: ${escapeHtml(String(v))}</div>`; }
+                    html+='</div>';
+                }
+                if(aff>=100){ if(unlocked){ html+=`<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;"><b>🔓 私密档案</b><pre style="font-size:11px;max-height:200px;overflow-y:auto;">${escapeHtml(JSON.stringify(privateData,null,2))}</pre><button class="btn-sm" id="editPrivateBtn">✏️ 编辑</button></div>`; } else { html+=`<div style="margin-top:12px;text-align:center;"><button class="btn-sm btn-gold" id="unlockPrivateBtn">🔓 输入密码解锁</button></div>`; } }
+                else { html+=`<div style="margin-top:12px;font-size:11px;color:var(--text3);text-align:center;">好感度需≥100 (当前${aff})</div>`; }
+                $('#npcModalCard').innerHTML=html; $('#npcModal').classList.add('show');
+                $('#closeNpcModal').addEventListener('click',()=>$('#npcModal').classList.remove('show'));
+                $('#deleteNpcBtn').addEventListener('click',()=>{ if(confirm(`删除 ${name}？`)){ delete getCurrentWorld().npcs[name]; if(currentTargetNpc===name) currentTargetNpc=null; saveState(); $('#npcModal').classList.remove('show'); renderNpcStrip(); addSystemMsg(`🗑️ ${name} 已删除`); } });
+                const ub=$('#unlockPrivateBtn'); if(ub) ub.addEventListener('click',()=>showPrivatePasswordModal(name));
+                const eb=$('#editPrivateBtn'); if(eb) eb.addEventListener('click',()=>showPrivateEditor(name));
+            }
+
+            function showPrivatePasswordModal(name) {
+                $('#privateModalCard').innerHTML=`<button class="close-modal" id="closePwd">✕</button><h3>🔐 输入密码</h3><input type="password" id="pwdInput" style="width:100%;padding:10px;margin:10px 0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;"><button class="btn-sm btn-gold" id="confirmPwd">确认</button>`;
+                $('#privateModal').classList.add('show'); $('#closePwd').addEventListener('click',()=>$('#privateModal').classList.remove('show'));
+                $('#confirmPwd').addEventListener('click',()=>{ if($('#pwdInput')?.value===PRIVATE_PASSWORD){ appState.privateUnlocked[getWorldKey()+'_'+name]=true; if(!appState.privateData[getWorldKey()+'_'+name]) appState.privateData[getWorldKey()+'_'+name]={}; saveState(); $('#privateModal').classList.remove('show'); $('#npcModal').classList.remove('show'); showNpcModal(name); addSystemMsg(`🔓 ${name}的私密档案已解锁`); } else alert('密码错误'); });
+            }
+
+            function showPrivateEditor(name) {
+                const key=getWorldKey()+'_'+name, data=appState.privateData[key]||{};
+                $('#privateModalCard').innerHTML=`<button class="close-modal" id="closeEditor">✕</button><h3>✏️ 编辑 ${escapeHtml(name)}</h3><textarea id="editorTA" rows="10" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:monospace;">${escapeHtml(JSON.stringify(data,null,2))}</textarea><button class="btn-sm btn-gold" id="saveEditor" style="margin-top:8px;">💾 保存</button>`;
+                $('#privateModal').classList.add('show'); $('#closeEditor').addEventListener('click',()=>$('#privateModal').classList.remove('show'));
+                $('#saveEditor').addEventListener('click',()=>{ try{ appState.privateData[key]=JSON.parse($('#editorTA')?.value||'{}'); saveState(); $('#privateModal').classList.remove('show'); $('#npcModal').classList.remove('show'); showNpcModal(name); addSystemMsg('✅ 已更新'); }catch(e){ alert('JSON错误'); } });
+            }
+
+            function openPanel(p) { document.querySelectorAll('.slide-panel.open').forEach(x=>x.classList.remove('open')); p.classList.add('open'); overlay.classList.add('show'); if(p.id==='panelStatus') renderStatusPanel(); if(p.id==='panelArchive') renderArchivePanel(); if(p.id==='panelSettings') renderSettingsPanel(); }
+            function closeAllPanels() { document.querySelectorAll('.slide-panel.open').forEach(x=>x.classList.remove('open')); overlay.classList.remove('show'); }
+            overlay.addEventListener('click',closeAllPanels);
+            document.querySelectorAll('.panel-close').forEach(b=>b.addEventListener('click',closeAllPanels));
+            $('#btnStatus').addEventListener('click',()=>openPanel($('#panelStatus')));
+            $('#btnArchive').addEventListener('click',()=>openPanel($('#panelArchive')));
+            $('#btnSettings').addEventListener('click',()=>openPanel($('#panelSettings')));
+            $('#btnEditWorld').addEventListener('click',showEditWorldModal);
+
+            worldBtn.addEventListener('pointerdown',e=>{ e.stopPropagation(); e.preventDefault(); worldDropdown.classList.toggle('show'); });
+            document.addEventListener('pointerdown',e=>{ if(!worldDropdown.contains(e.target)&&e.target!==worldBtn&&!worldBtn.contains(e.target)) worldDropdown.classList.remove('show'); });
+
+            msgInput.addEventListener('input',()=>{ msgInput.style.height='auto'; msgInput.style.height=Math.min(msgInput.scrollHeight,120)+'px'; });
+            msgInput.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); } });
+            sendBtn.addEventListener('click',sendMessage);
+
+            function truncateMessages(msgs) { return msgs.filter(m=>m.role==='user'||m.role==='assistant').slice(-6).map(m=>({role:m.role,content:(m.content||'').substring(0,500)})); }
+
+            async function sendMessage() {
+                if(isSending||isStreaming) return;
+                const text=msgInput.value.trim(); if(!text) return;
+                if(!appState.settings.apiKey.trim()){ alert('请先设置API Key'); openPanel($('#panelSettings')); return; }
+                isSending=true; sendBtn.disabled=true;
+                const w=getCurrentWorld(); w.messages.push({role:'user',content:text,timestamp:Date.now()}); appendMessageToDOM({role:'user',content:text});
+                msgInput.value=''; msgInput.style.height='auto'; scrollChatBottom(); saveState();
+                const msgs=[{role:'system',content:buildSystemPrompt()},...truncateMessages(w.messages)];
+                const thinkingDiv=document.createElement('div'); thinkingDiv.className='msg-bubble msg-assistant'; thinkingDiv.innerHTML='<div class="thinking-dots"><span></span><span></span><span></span></div>思考中...'; chatArea.appendChild(thinkingDiv); scrollChatBottom();
+                isStreaming=true;
+                try{
+                    const resp=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${appState.settings.apiKey}`},body:JSON.stringify({model:appState.settings.model,messages:msgs,stream:true,max_tokens:1024,temperature:0.95,...(appState.settings.enableSearch?{enable_search:true}:{})}),signal:AbortSignal.timeout(120000)});
+                    if(!resp.ok) throw new Error('API错误 '+resp.status);
+                    thinkingDiv.remove();
+                    const assistantDiv=document.createElement('div'); assistantDiv.className='msg-bubble msg-assistant'; assistantDiv.innerHTML='<div class="msg-label">📖 旁白</div>'; chatArea.appendChild(assistantDiv);
+                    let full='';
+                    const reader=resp.body.getReader(),decoder=new TextDecoder(); let buf='';
+                    while(true){ const{done,value}=await reader.read(); if(done) break; buf+=decoder.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||''; for(const line of lines){ if(!line.trim()||!line.startsWith('data:')) continue; const str=line.slice(5).trim(); if(str==='[DONE]') continue; try{ const d=JSON.parse(str).choices?.[0]?.delta?.content||''; full+=d; let display=full.replace(/```json[\s\S]*?(```|$)/g,'').replace(/【[^】]*$/g,''); assistantDiv.innerHTML='<div class="msg-label">📖 旁白</div>'+escapeHtml(display).replace(/\n/g,'<br>'); scrollChatBottom(); }catch(e){} } }
+                    let finalDisplay=full.replace(/```json[\s\S]*?```/g,'').replace(/【[^】]+】/g,'').trim();
+                    assistantDiv.innerHTML='<div class="msg-label">📖 旁白</div>'+escapeHtml(finalDisplay).replace(/\n/g,'<br>');
+                    // 建议芯片
+                    let suggests=extractSuggests(full); if(!suggests.length) suggests=['继续探索','与周围的人交谈','观察周围环境'];
+                    const chipDiv=document.createElement('div'); chipDiv.className='suggest-chips';
+                    suggests.forEach(s=>{ const chip=document.createElement('span'); chip.className='suggest-chip'; chip.textContent=s; chip.addEventListener('click',()=>{ msgInput.value=s; msgInput.dispatchEvent(new Event('input')); msgInput.focus(); }); chipDiv.appendChild(chip); });
+                    assistantDiv.appendChild(chipDiv);
+                    // 开发者模式原始JSON
+                    if(devMode){ const raw=document.createElement('div'); raw.className='raw-json show'; raw.textContent=full; assistantDiv.appendChild(raw); }
+                    w.messages.push({role:'assistant',content:full,timestamp:Date.now(),_raw:full});
+                    processJson(full); saveState(); renderNpcStrip();
+                }catch(err){
+                    thinkingDiv.remove(); const errDiv=document.createElement('div'); errDiv.className='msg-system'; errDiv.textContent='⚠️ '+(err.name==='TimeoutError'?'请求超时':err.message); errDiv.style.color='var(--danger)'; chatArea.appendChild(errDiv);
+                }finally{ isStreaming=false; isSending=false; sendBtn.disabled=false; scrollChatBottom(); msgInput.focus(); }
+            }
+
+            function buildSystemPrompt() {
+                const w=getCurrentWorld(); let p=w.prompt;
+                p+=`\n【当前】${appState.protagonistStatus.name} | ${appState.protagonistStatus.location} | ${appState.protagonistStatus.time}`;
+                const keys=Object.keys(w.npcs); if(keys.length) p+=`\n已结识: ${keys.join(', ')}`;
+                if(currentTargetNpc) p+=`\n【对话目标: ${currentTargetNpc} - 如为新角色需完整npc_status】`;
+                else p+=`\n【日常模式 - 只需6个核心JSON字段】`;
+                return p;
+            }
+
+            function processJson(text) {
+                let jsonStr=null; const cm=text.match(/```json\s*([\s\S]*?)```/); if(cm) jsonStr=cm[1].trim();
+                if(!jsonStr){ const bm=text.match(/\{[\s\S]*\}/); if(bm) jsonStr=bm[0]; }
+                if(!jsonStr) return;
+                try{
+                    const data=JSON.parse(jsonStr); if(!data||Object.keys(data).length===0) return;
+                    const w=getCurrentWorld(); let changed=false;
+                    if(data.npc_met&&data.npc_met!=='null'&&data.npc_met.trim()!==''){
+                        const name=data.npc_met.trim();
+                        if(!w.npcs[name]){ w.npcs[name]={affection:100,description:data.npc_description||'',status:data.npc_status||{},metAt:Date.now()}; addSystemMsg(`✨ 结识新NPC：${name}`); checkAchievement('初次邂逅'); changed=true; }
+                        else if(data.npc_description||data.npc_status){ if(data.npc_description) w.npcs[name].description=data.npc_description; if(data.npc_status) w.npcs[name].status=Object.assign(w.npcs[name].status||{},data.npc_status); changed=true; }
+                    }
+                    if(typeof data.affection_change==='number'&&data.affection_change!==0){ const t=currentTargetNpc||Object.keys(w.npcs).pop(); if(t&&w.npcs[t]){ w.npcs[t].affection=Math.max(0,(w.npcs[t].affection||100)+data.affection_change); changed=true; } }
+                    if(data.event){ const mems=appState.memories[getWorldKey()]||[]; mems.push({event:data.event,timestamp:Date.now()}); changed=true; }
+                    if(data.location){ appState.protagonistStatus.location=data.location; changed=true; }
+                    if(data.time){ appState.protagonistStatus.time=data.time; changed=true; }
+                    if(changed){ saveState(); renderNpcStrip(); }
+                }catch(e){ console.warn('JSON解析失败:',e.message); }
+            }
+            function checkAchievement(name){ if(!appState.achievements.find(a=>a.name===name)){ appState.achievements.push({name,timestamp:Date.now()}); addSystemMsg(`🏆 成就解锁：${name}`); saveState(); } }
+
+            renderAll(); if(getCurrentWorld().messages.length===0) addSystemMsg(`欢迎来到 ${getCurrentWorld().emoji} ${getCurrentWorld().name}`);
+            devMode=appState.settings.devMode||false;
+        })();
+    </script>
+</body>
+</html>
